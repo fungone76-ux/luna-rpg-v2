@@ -1,0 +1,45 @@
+# file: worlds/fantasy_dark.yaml
+meta:
+  id: "fantasy_dark"
+  name: "Il Sigillo della Carne"
+  genre: "Dark Medieval Fantasy, Adult, Horror"
+  description: "Un bastione corrotto da magia oscura e lussuria. Atmosfera opprimente."
+
+visual_style:
+  base_prompt: "score_9, score_8_up, masterpiece, photorealistic, dark fantasy, medieval setting, detailed, atmospheric"
+  negative_prompt: "score_5, score_4, low quality, anime, monochrome, deformed, bad anatomy, worst face, extra fingers, cartoon, 3d render"
+  loras:
+    - "<lora:FantasyWorldPonyV2:0.40>"
+
+companions:
+  Luna:
+    # La tua incantatrice/complice originale
+    base_prompt: "stsdebbie, dynamic pose, 1girl, mature woman, brown hair, shiny skin, head tilt, massive breasts, cleavage, <lora:stsDebbie-10e:0.7> <lora:Expressive_H-000001:0.20>"
+    default_outfit: "rags"
+    wardrobe:
+      rags: "wearing torn rags, dirty skin, barefoot, prisoner clothes"
+      mage: "wearing dark purple mage robe, intricate embroidery, leather belt"
+      nude: "nude, naked, wearing nothing, (nipples:1.1), (pussy:1.1)"
+
+  Stella:
+    # La nobildonna rapita
+    base_prompt: "alice_milf_catchers, 1girl, blonde hair, beautiful blue eyes, shapely legs, hourglass figure, skinny body, narrow waist, wide hips, <lora:alice_milf_catchers_lora:0.7> <lora:Expressive_H:0.2>"
+    default_outfit: "noble_dress"
+    wardrobe:
+      noble_dress: "wearing torn noble silk dress, loosened corset, iron shackles on wrists"
+      nude: "nude, naked, wearing nothing"
+
+  Maria:
+    # La Grande Inquisitrice
+    base_prompt: "stsSmith, 1girl, mature female, (middle eastern woman:1.5), veiny breasts, black hair, short hair, evil smile, glowing magic, <lora:stsSmith-10e:0.65> <lora:Expressive_H:0.2>"
+    default_outfit: "inquisitor"
+    wardrobe:
+      inquisitor: "wearing black inquisitor leather armor, high boots, iron sigils"
+      ritual: "wearing ceremonial red velvet robe, open front, jewelry"
+
+npc_logic:
+  male_hints: ["guard", "orc", "king", "bandit", "soldier", "goblin", "troll"]
+  female_hints: ["queen", "maid", "witch", "nun", "barmaid"]
+
+  male_prompt: "1boy, male npc, medieval fantasy outfit, detailed face"
+  female_prompt: "1girl, female npc, medieval fantasy outfit, detailed face"

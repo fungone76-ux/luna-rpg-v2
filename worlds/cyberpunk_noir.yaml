@@ -1,0 +1,45 @@
+# file: worlds/cyberpunk_noir.yaml
+meta:
+  id: "cyberpunk_noir"
+  name: "Neon Shadows: 2099"
+  genre: "Cyberpunk, Sci-Fi, Noir"
+  description: "Una metropoli piovosa dominata dalle corporazioni e dagli hacker."
+
+visual_style:
+  base_prompt: "score_9, score_8_up, masterpiece, photorealistic, cyberpunk city, neon lights, rain, wet streets, chromatic aberration, 8k"
+  negative_prompt: "score_5, score_4, low quality, medieval, rustic, nature, sun, stone walls, sword, armor, deformed"
+  loras:
+    - "<lora:CyberPunkXL:0.6>"  # Placeholder per un LoRA di stile sci-fi
+
+companions:
+  Luna:
+    # Versione Cyberpunk: Hacker Netrunner (stesso volto, outfit tech)
+    base_prompt: "stsdebbie, 1girl, mature woman, brown hair, cybernetic implants on neck, glowing tech glasses, <lora:stsDebbie-10e:0.7>"
+    default_outfit: "netrunner"
+    wardrobe:
+      netrunner: "wearing black latex tactical bodysuit, glowing circuit lines, leather jacket"
+      casual: "wearing oversized hoodie, holographic sneakers, short denim pants"
+      nude: "nude, naked, cybernetic interface ports on skin"
+
+  Stella:
+    # Versione Cyberpunk: Androide di Lusso (stesso volto, pelle sintetica)
+    base_prompt: "alice_milf_catchers, 1girl, blonde hair, pale synthetic skin, joint lines on limbs, perfect body, <lora:alice_milf_catchers_lora:0.7>"
+    default_outfit: "corpo_suit"
+    wardrobe:
+      corpo_suit: "wearing white corporate business suit, pencil skirt, heels"
+      maintenance: "wearing nothing, open maintenance panel on chest, wires exposed"
+
+  Maria:
+    # Versione Cyberpunk: CEO Corporativa Spietata (stesso volto, stile dominante)
+    base_prompt: "stsSmith, 1girl, mature female, (middle eastern woman:1.5), black hair, short hair, evil smile, holding a datapad, <lora:stsSmith-10e:0.65>"
+    default_outfit: "executive"
+    wardrobe:
+      executive: "wearing sharp black futuristic blazer, high collar, red tie, leather gloves"
+      nightclub: "wearing revealing metallic dress, expensive jewelry, fur coat"
+
+npc_logic:
+  male_hints: ["cop", "cyborg", "salaryman", "fixer", "ripperdoc"]
+  female_hints: ["doll", "popstar", "secretary", "assassin"]
+
+  male_prompt: "1boy, male npc, futuristic street wear, cyberware"
+  female_prompt: "1girl, female npc, high tech fashion, neon makeup"

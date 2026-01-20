@@ -5,3 +5,4 @@ pyyaml
 google-generativeai
 websocket-client
 pygame
+google-cloud-texttospeech

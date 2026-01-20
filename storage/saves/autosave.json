@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "world_id": "fantasy_dark",
+    "created_at": 1768947561.0318236,
+    "turn_count": 1
+  },
+  "game": {
+    "location": "Start",
+    "companion_name": "Luna",
+    "current_outfit": "rags",
+    "inventory": [],
+    "gold": 0,
+    "affinity": {
+      "Luna": 0,
+      "Stella": 0,
+      "Maria": 0
+    },
+    "quest_log": [
+      "Sopravvivi."
+    ],
+    "flags": {}
+  },
+  "history": [
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile..."
+    },
+    {
+      "role": "user",
+      "content": "Mi guardo attorno e cerco una via di fuga. 'Luna, vedi qualcosa?'"
+    },
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile..."
+    }
+  ],
+  "summary_log": []
+}
