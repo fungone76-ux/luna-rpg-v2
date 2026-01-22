@@ -1,37 +1,36 @@
 {
   "meta": {
-    "world_id": "fantasy_dark",
-    "created_at": 1768947561.0318236,
-    "turn_count": 1
+    "world_id": "school_life",
+    "created_at": 1769115517.5936673,
+    "turn_count": 2
   },
   "game": {
-    "location": "Start",
+    "time_of_day": "Morning",
+    "location": "School Entrance Gate",
     "companion_name": "Luna",
-    "current_outfit": "rags",
+    "current_outfit": "school_uniform",
     "inventory": [],
     "gold": 0,
+    "hp": 20,
+    "stats": {
+      "strength": 10,
+      "mind": 10,
+      "charisma": 10
+    },
     "affinity": {
       "Luna": 0,
       "Stella": 0,
       "Maria": 0
     },
     "quest_log": [
-      "Sopravvivi."
+      "Survive the School Year."
     ],
     "flags": {}
   },
   "history": [
     {
       "role": "model",
-      "content": "La connessione neurale è instabile..."
-    },
-    {
-      "role": "user",
-      "content": "Mi guardo attorno e cerco una via di fuga. 'Luna, vedi qualcosa?'"
-    },
-    {
-      "role": "model",
-      "content": "La connessione neurale è instabile..."
+      "content": "* * *\n\nTi avvicini al cancello principale della \"Da Vinci\" proprio mentre il sole inizia a scaldare l'aria frizzante del mattino. Studenti chiacchierano animatamente, alcuni corrono per non arrivare in ritardo.\n\nLa tua attenzione viene catturata da una figura familiare: la Professoressa Luna. È appoggiata a una colonna, con un registro degli studenti in mano. Indossa un tailleur grigio scuro, impeccabile, che ne sottolinea la figura. I suoi capelli corvini sono raccolti in una crocchia severa, ma qualche ciocca sfugge incorniciandole il viso. Ti osserva con i suoi occhi scuri mentre ti avvicini."
     }
   ],
   "summary_log": []

@@ -1,5 +1,6 @@
 # file: ui/main_window.py
 import sys
+import random
 from typing import List
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QTextEdit, QLineEdit, QPushButton, QLabel, QFrame,
@@ -10,9 +11,10 @@ from core.engine import GameEngine
 from config.settings import Settings
 from ui.components.startup_dialog import StartupDialog
 from ui.components.image_viewer import InteractiveImageViewer
+# --- IMPORTIAMO IL NUOVO PANNELLO ---
+from ui.components.status_panel import StatusPanel
 
 
-# --- WORKERS (Motore Parallelo) ---
 class LLMWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
@@ -56,14 +58,12 @@ class AudioWorker(QThread):
             pass
 
 
-# --- FINESTRA PRINCIPALE (Layout Classico) ---
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Luna D&D – Master Libero (v2 Parallel)")
-        self.resize(1200, 750)
+        self.setWindowTitle("Luna RPG v2 - Universal")
+        self.resize(1200, 780)
 
-        # Carica Stile "Carta/RPG"
         try:
             with open("ui/styles.qss", "r") as f:
                 self.setStyleSheet(f.read())
@@ -75,8 +75,6 @@ class MainWindow(QMainWindow):
         self.image_index = -1
 
         self._setup_ui()
-
-        # Avvio ritardato
         QTimer.singleShot(100, self._start_game_sequence)
 
     def _start_game_sequence(self):
@@ -86,11 +84,15 @@ class MainWindow(QMainWindow):
             if choice["mode"] == "load":
                 if self.engine.load_game(choice["path"]):
                     self._update_stats()
-                    self._append_story("\n--- SESSIONE CARICATA ---\n")
-                    # Recupera ultima immagine se possibile (logica base)
-                    self.status_lbl.setText("Partita caricata.")
+                    self._append_story("\n--- SESSION LOADED ---\n")
+                    self.status_lbl.setText("Game Loaded.")
             else:
-                self.engine.start_new_game("fantasy_dark", choice["companion"])
+                selected_world = choice.get("world_id", "school_life")
+                companion = choice.get("companion", "Luna")
+
+                print(f"🚀 Starting World: {selected_world} with {companion}")
+
+                self.engine.start_new_game(selected_world, companion)
                 self._handle_player_input(None, is_intro=True)
         else:
             sys.exit()
@@ -102,39 +104,30 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(15)
 
-        # === COLONNA SINISTRA (2/5) ===
+        # === LEFT COLUMN ===
         left_layout = QVBoxLayout()
         left_layout.setSpacing(10)
 
-        # Titolo Stato
-        lbl_state = QLabel("Stato party")
-        lbl_state.setStyleSheet("font-size: 12pt; font-weight: bold;")
-        left_layout.addWidget(lbl_state)
+        # --- MODIFICA CRUCIALE: RIMOSSO IL VECCHIO TEXTEDIT ---
+        # self.stats_edit = QTextEdit() ... (CANCELLATO)
 
-        # Box Statistiche
-        self.stats_edit = QTextEdit()
-        self.stats_edit.setReadOnly(True)
-        self.stats_edit.setMinimumHeight(140)
-        self.stats_edit.setObjectName("StatsBox")
-        left_layout.addWidget(self.stats_edit)
+        # --- INSERITO IL NUOVO STATUS PANEL ---
+        self.status_panel = StatusPanel()
+        left_layout.addWidget(self.status_panel)
+        # ------------------------------------------------------
 
-        # Separatore
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
         left_layout.addWidget(line)
 
-        # Titolo Scena
-        lbl_scene = QLabel("Scena attuale")
+        lbl_scene = QLabel("Visual Scene")
         lbl_scene.setStyleSheet("font-size: 12pt; font-weight: bold;")
         left_layout.addWidget(lbl_scene)
 
-        # Immagine (Uso il nuovo viewer ma stilizzato come il vecchio)
         self.img_viewer = InteractiveImageViewer()
-        self.img_viewer.image_lbl.setObjectName("ImageLabel")  # Per il CSS nero
-        left_layout.addWidget(self.img_viewer, 1)  # Stretch
+        self.img_viewer.image_lbl.setObjectName("ImageLabel")
+        left_layout.addWidget(self.img_viewer, 1)
 
-        # Navigazione Immagini
         nav_layout = QHBoxLayout()
         self.btn_prev = QPushButton("◀")
         self.btn_prev.setFixedWidth(40)
@@ -151,69 +144,51 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self.btn_next)
         left_layout.addLayout(nav_layout)
 
-        # Checkbox Voce
-        self.chk_voice = QCheckBox("Voce narrante attiva")
+        self.chk_voice = QCheckBox("Voice Narrator")
         self.chk_voice.setChecked(True)
-        self.chk_voice.setStyleSheet("font-size: 11pt; color: #333;")
         left_layout.addWidget(self.chk_voice)
 
-        # Status Label
-        self.status_lbl = QLabel("Pronto.")
+        self.status_lbl = QLabel("Ready.")
         self.status_lbl.setStyleSheet("color: #555; font-style: italic;")
         left_layout.addWidget(self.status_lbl)
 
-        # Pulsanti Save/Load
         sl_layout = QHBoxLayout()
-        btn_save = QPushButton("Salva")
+        btn_save = QPushButton("Save")
         btn_save.clicked.connect(self._on_save)
-        btn_load = QPushButton("Carica")
+        btn_load = QPushButton("Load")
         btn_load.clicked.connect(self._on_load)
         sl_layout.addWidget(btn_save)
         sl_layout.addWidget(btn_load)
         left_layout.addLayout(sl_layout)
 
-        # Bottone Video
-        self.btn_video = QPushButton("Genera Video (ComfyUI)")
-        self.btn_video.clicked.connect(lambda: QMessageBox.information(self, "Info", "WIP"))
-        left_layout.addWidget(self.btn_video)
-
         main_layout.addLayout(left_layout, 2)
 
-        # === COLONNA DESTRA (3/5) ===
+        # === RIGHT COLUMN ===
         right_layout = QVBoxLayout()
 
-        # Titolo Storia
-        lbl_story = QLabel("Storia")
+        lbl_story = QLabel("Story Log")
         lbl_story.setStyleSheet("font-size: 13pt; font-weight: bold; color: #3b2410;")
         right_layout.addWidget(lbl_story)
 
-        # Diario
         self.story_edit = QTextEdit()
         self.story_edit.setReadOnly(True)
         self.story_edit.setObjectName("StoryArea")
-        self.story_edit.setPlaceholderText("L'avventura inizia qui...")
         right_layout.addWidget(self.story_edit, 1)
 
-        # Input Area
         input_layout = QHBoxLayout()
 
-        self.chk_dice = QCheckBox("🎲 Tira")
-        self.chk_dice.setStyleSheet("font-weight: bold; color: #333;")
-        input_layout.addWidget(self.chk_dice)
-
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Scrivi cosa fai...")
+        self.input_field.setPlaceholderText("What do you do?")
         self.input_field.returnPressed.connect(self._send_action)
         input_layout.addWidget(self.input_field)
 
-        self.btn_send = QPushButton("Invia azione")
+        self.btn_send = QPushButton("Send")
         self.btn_send.clicked.connect(self._send_action)
         input_layout.addWidget(self.btn_send)
 
         right_layout.addLayout(input_layout)
         main_layout.addLayout(right_layout, 3)
 
-    # --- LOGICA DI GIOCO ---
     def _send_action(self):
         text = self.input_field.text().strip()
         if not text: return
@@ -221,28 +196,16 @@ class MainWindow(QMainWindow):
 
     def _handle_player_input(self, text, is_intro=False):
         if not is_intro:
-            # Aggiungi eventuale logica dado qui (es. "[DADO: 15] Azione...")
-            prefix = ""
-            if self.chk_dice.isChecked():
-                # Simuliamo un tiro per ora (o integra dice_widget)
-                import random
-                roll = random.randint(1, 20)
-                prefix = f"[D20: {roll}] "
-                self.chk_dice.setChecked(False)  # Reset
-
-            full_text = prefix + text
-            self._append_story(f"\n> **TU**: {full_text}\n")
+            self._append_story(f"> **YOU**: {text}\n")
             self.input_field.clear()
-            text = full_text  # Passiamo il testo col dado all'LLM
 
         self.input_field.setDisabled(True)
-        self.input_field.setPlaceholderText("Luna sta scrivendo...")
-        self.status_lbl.setText("Elaborazione neurale...")
+        self.input_field.setPlaceholderText("...")
+        self.status_lbl.setText("Thinking...")
 
-        # 1. Avvia LLM
         self.llm_worker = LLMWorker(self.engine, text, is_intro)
         self.llm_worker.finished.connect(self._on_llm_finished)
-        self.llm_worker.error.connect(lambda e: self.status_lbl.setText(f"Errore: {e}"))
+        self.llm_worker.error.connect(lambda e: self.status_lbl.setText(f"Err: {e}"))
         self.llm_worker.start()
 
     @Slot(dict)
@@ -250,24 +213,23 @@ class MainWindow(QMainWindow):
         text = data.get("text", "")
         visual_en = data.get("visual_en", "")
         tags_en = data.get("tags_en", [])
-        name = self.engine.state_manager.current_state["game"]["companion_name"]
 
-        # Mostra Testo
+        name = self.engine.state_manager.current_state["game"]["companion_name"]
         self._append_story(f"\n**{name.upper()}**: {text}\n")
+
+        # AGGIORNAMENTO STATS SUL NUOVO PANNELLO
         self._update_stats()
 
-        # Sblocca UI
         self.input_field.setDisabled(False)
-        self.input_field.setPlaceholderText("Scrivi cosa fai...")
+        self.input_field.setPlaceholderText("What do you do?")
         self.input_field.setFocus()
-        self.status_lbl.setText("In attesa...")
+        self.status_lbl.setText("Waiting...")
 
-        # Audio & Video Paralleli
         if self.chk_voice.isChecked():
             self.audio_worker = AudioWorker(self.engine, text)
             self.audio_worker.start()
 
-        self.img_viewer.image_lbl.setText("Generazione immagine...")
+        self.img_viewer.image_lbl.setText("Generating Image...")
         self.img_worker = ImageWorker(self.engine, visual_en, tags_en)
         self.img_worker.finished.connect(self._on_image_finished)
         self.img_worker.start()
@@ -276,12 +238,11 @@ class MainWindow(QMainWindow):
     def _on_image_finished(self, path):
         if path:
             self._register_image(path)
-            self.status_lbl.setText("Immagine aggiornata.")
+            self.status_lbl.setText("Image Ready.")
         else:
-            self.img_viewer.image_lbl.setText("Nessuna immagine.")
+            self.img_viewer.image_lbl.setText("Image Error.")
 
     def _register_image(self, path):
-        """Gestione cronologia immagini"""
         self.image_history.append(path)
         self.image_index = len(self.image_history) - 1
         self.img_viewer.update_image(path)
@@ -304,13 +265,9 @@ class MainWindow(QMainWindow):
             self._update_nav_buttons()
 
     def _update_stats(self):
-        s = self.engine.state_manager.current_state.get("game", {})
-        m = self.engine.state_manager.current_state.get("meta", {})
-        txt = (f"LUOGO: {s.get('location')}\n"
-               f"OUTFIT: {s.get('current_outfit')}\n"
-               f"TURNO: {m.get('turn_count')}\n"
-               f"INV: {', '.join(s.get('inventory', []))}")
-        self.stats_edit.setPlainText(txt)
+        # NUOVA LOGICA: Passiamo lo stato intero al StatusPanel
+        state = self.engine.state_manager.current_state
+        self.status_panel.update_status(state)
 
     def _append_story(self, text):
         self.story_edit.append(text)
@@ -319,11 +276,11 @@ class MainWindow(QMainWindow):
 
     def _on_save(self):
         if self.engine.state_manager.save_game("manual_save.json"):
-            self.status_lbl.setText("Partita salvata.")
+            self.status_lbl.setText("Saved.")
 
     def _on_load(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Carica", "storage/saves", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, "Load Game", "storage/saves", "JSON (*.json)")
         if path:
             if self.engine.load_game(path):
                 self._update_stats()
-                self.status_lbl.setText("Caricato.")
+                self.status_lbl.setText("Loaded.")

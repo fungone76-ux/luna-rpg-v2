@@ -182,3 +182,4 @@ cython_debug/
 google_credentials.json
 STORAGE/
 /storage
+/old
