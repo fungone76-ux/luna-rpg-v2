@@ -1,76 +1,60 @@
 # file: media/image_client.py
-import requests
 import base64
-import time
+import requests
 import os
-from pathlib import Path
+import time
+from datetime import datetime
 from config.settings import Settings
 
 
 class ImageClient:
     def __init__(self):
-        self.sd_url = Settings.get_sd_url()
-        self.output_dir = Path("storage/images")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.settings = Settings.get_instance()
+        # Non impostiamo l'URL qui nel __init__ perché potrebbe cambiare tra un riavvio e l'altro
+        # Lo leggiamo dinamicamente ad ogni chiamata.
 
-        # Test connettività silenzioso
-        self.online = self._check_connection()
-        if self.online:
-            print(f"✅ Image Client: Connesso a SD ({self.sd_url})")
-        else:
-            print(f"⚠️ Image Client: SD Offline ({self.sd_url}). Generazione disabilitata.")
-
-    def _check_connection(self):
-        """Verifica se SD è raggiungibile."""
-        if not self.sd_url: return False
-        try:
-            # Chiamata leggera per vedere se l'API risponde
-            requests.get(f"{self.sd_url}/sdapi/v1/progress", timeout=3)
-            return True
-        except:
-            return False
-
-    def generate_image(self, positive_prompt: str, negative_prompt: str) -> str:
+    def generate_image(self, pos_prompt: str, neg_prompt: str) -> str:
         """
-        Invia la richiesta a SD e salva l'immagine.
-        Restituisce il percorso del file salvato.
+        Invia richiesta a Stable Diffusion (Locale o RunPod).
         """
-        if not self.online:
-            print("🎨 [MOCK] SD Offline - Immagine immaginaria generata.")
-            return ""
+        # Recupera l'URL corretto (Locale o RunPod) in base alla checkbox
+        base_url = self.settings.get_sd_url()
+        api_url = f"{base_url}/sdapi/v1/txt2img"
 
         payload = {
-            "prompt": positive_prompt,
-            "negative_prompt": negative_prompt,
-            "steps": 25,
-            "width": 896,  # Formato cinematico
+            "prompt": pos_prompt,
+            "negative_prompt": neg_prompt,
+            "steps": 24,
+            "width": 896,  # Formato verticale per ritratti
             "height": 1152,
-            "cfg_scale": 7,
             "sampler_name": "Euler a",
-            "batch_size": 1,
+            "cfg_scale": 7,
+            "enable_hr": False,  # HR Fix rallenta, attivalo se usi RunPod potente
         }
 
+        print(f"📡 Connecting to SD Backend: {base_url} ...")
+
         try:
-            print("🎨 Invio richiesta a Stable Diffusion...")
-            response = requests.post(f"{self.sd_url}/sdapi/v1/txt2img", json=payload, timeout=120)
+            response = requests.post(api_url, json=payload, timeout=720)  # Timeout lungo per RunPod
 
             if response.status_code == 200:
                 r = response.json()
-                image_data = base64.b64decode(r['images'][0])
+                img_data = base64.b64decode(r['images'][0])
 
-                # Nome file univoco
+                # Salvataggio
                 filename = f"img_{int(time.time())}.png"
-                filepath = self.output_dir / filename
+                save_path = os.path.join("storage", "images", filename)
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-                with open(filepath, "wb") as f:
-                    f.write(image_data)
+                with open(save_path, "wb") as f:
+                    f.write(img_data)
 
-                print(f"🖼️ Immagine salvata: {filepath}")
-                return str(filepath)
+                print(f"🖼️ Immagine salvata: {save_path}")
+                return save_path
             else:
-                print(f"❌ Errore SD: {response.status_code}")
+                print(f"❌ Errore SD: {response.status_code} - {response.text}")
                 return ""
 
         except Exception as e:
-            print(f"❌ Errore Generazione: {e}")
+            print(f"❌ Errore Connessione SD ({base_url}): {e}")
             return ""

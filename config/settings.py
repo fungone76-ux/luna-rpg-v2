@@ -1,28 +1,46 @@
+# file: config/settings.py
+import json
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+SETTINGS_FILE = "settings.json"
 
 class Settings:
-    MODE = os.getenv("EXECUTION_MODE", "LOCAL").upper()
-    GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+    _instance = None
 
-    @staticmethod
-    def get_sd_url():
-        # Se siamo su RunPod, costruiamo l'URL proxy dinamicamente
-        if Settings.MODE == "RUNPOD":
-            pod_id = os.getenv("RUNPOD_ID")
-            return f"https://{pod_id}-7860.proxy.runpod.net" if pod_id else ""
-        # Altrimenti fallback su locale
-        return "http://127.0.0.1:7860"
+    def __init__(self):
+        self.config = {
+            "runpod_active": False,
+            "runpod_url": "https://tuo-id-runpod.proxy.runpod.net",
+            "local_url": "http://127.0.0.1:7860"
+        }
+        self.load()
 
-    @staticmethod
-    def get_comfy_url():
-        if Settings.MODE == "RUNPOD":
-            pod_id = os.getenv("RUNPOD_ID")
-            return f"https://{pod_id}-8188.proxy.runpod.net" if pod_id else ""
-        return None  # Disabilitato in locale per sicurezza
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
-    @staticmethod
-    def video_enabled():
-        return Settings.MODE == "RUNPOD"
+    def load(self):
+        if os.path.exists(SETTINGS_FILE):
+            try:
+                with open(SETTINGS_FILE, "r") as f:
+                    saved = json.load(f)
+                    self.config.update(saved)
+            except:
+                pass
+
+    def save(self):
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(self.config, f, indent=4)
+
+    # Helper rapidi
+    def is_runpod(self):
+        return self.config.get("runpod_active", False)
+
+    def get_sd_url(self):
+        if self.is_runpod():
+            # Pulisce l'URL se l'utente mette lo slash finale
+            url = self.config.get("runpod_url", "").rstrip("/")
+            return url if url else "http://127.0.0.1:7860"
+        return self.config.get("local_url", "http://127.0.0.1:7860")

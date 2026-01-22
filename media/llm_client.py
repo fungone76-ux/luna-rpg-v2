@@ -2,61 +2,74 @@
 import os
 import json
 import re
-import google.generativeai as genai
 from typing import List, Dict, Any
+
+# --- LIBRERIE NECESSARIE ---
+# 1. pip install google-genai
+# 2. pip install python-dotenv
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+# --- CARICAMENTO .ENV ---
+# Questo comando cerca il file .env e carica le variabili
+load_dotenv()
+
+# Configurazione di emergenza (lascia vuoto se usi .env)
+HARDCODED_KEY = "INCOLLA_QUI_SOLO_SE_ENV_NON_VA"
 
 
 class LLMClient:
     def __init__(self):
-        # Recupera la chiave
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            print("⚠️ ATTENZIONE: GEMINI_API_KEY non trovata nel file .env")
-            self.model = None
+        # 1. Recupera la chiave (Ora load_dotenv() ha caricato il file .env)
+        self.api_key = os.getenv("GEMINI_API_KEY")
+
+        # Fallback se .env fallisce
+        if not self.api_key:
+            if "INCOLLA_QUI" not in HARDCODED_KEY:
+                self.api_key = HARDCODED_KEY
+                print("⚠️ .env non letto correttamente: Utilizzo chiave hardcoded.")
+            else:
+                print("❌ ERRORE CRITICO: GEMINI_API_KEY non trovata (né in .env né nel codice).")
+                self.client = None
+                self.model_id = None
+                return
+
+        # 2. Inizializzazione Client V2
+        try:
+            self.client = genai.Client(api_key=self.api_key)
+        except Exception as e:
+            print(f"❌ Errore Inizializzazione Client: {e}")
+            self.client = None
             return
 
-        # Configurazione Base
-        genai.configure(api_key=api_key)
-        self.model = None
+        self.model_id = None
 
-        # LISTA MODELLI AGGIORNATA
-        # Priorità assoluta al modello che hai richiesto
+        # LISTA MODELLI (Priorità alla stabilità)
         candidates = [
-            "gemini-3-pro-preview",  # <--- ECCOLO! (Il più potente)
-            "gemini-3-flash-preview",  # Alternativa veloce se Pro è occupato
-            "gemini-2.5-pro",  # Fallback stabile
-            "gemini-1.5-pro",  # Vecchia gloria
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash"
         ]
 
-        print("🤖 [LLM Init] Connessione a Gemini 3...")
+        print("🤖 [LLM Init] Connessione a Gemini (SDK Google GenAI V2)...")
 
         for model_name in candidates:
             try:
-                # Testiamo se il modello è accessibile con la tua chiave
-                test_model = genai.GenerativeModel(model_name)
-                # Chiamata dummy per verificare l'accesso
-                test_model.generate_content("test")
-
-                # Se funziona, lo assegniamo!
-                self.model = genai.GenerativeModel(
-                    model_name=model_name,
-                    generation_config={
-                        "temperature": 0.9,  # Creatività alta
-                        "top_p": 0.95,
-                        "top_k": 40,
-                        "max_output_tokens": 1024,
-                    }
+                # Test di connessione leggero
+                self.client.models.generate_content(
+                    model=model_name,
+                    contents="Test connection"
                 )
+                self.model_id = model_name
                 print(f"✅ Modello LLM attivato: {model_name}")
                 break
             except Exception as e:
-                # Se fallisce, proviamo il prossimo
-                # print(f"   (Skip {model_name}: non disponibile)")
-                continue
+                # print(f"   (Skip {model_name}: {e})") # Decommenta per debug
+                pass
 
-        if not self.model:
-            print("❌ ERRORE CRITICO: Nessun modello Gemini funzionante trovato.")
-            print("   Verifica che la tua API KEY supporti Gemini 3.")
+        if not self.model_id:
+            print("❌ ERRORE: Nessun modello Gemini funzionante trovato o Chiave non valida.")
 
     def generate_response(
             self,
@@ -66,60 +79,74 @@ class LLMClient:
             summaries: List[str]
     ) -> Dict[str, Any]:
         """Invia il contesto a Gemini e parsa la risposta."""
-        if not self.model:
+        if not self.client or not self.model_id:
             return {"text": "Errore: Nessun modello AI connesso.", "visual_en": "", "tags_en": []}
 
-        # 1. Costruiamo il Prompt Unico
-        full_prompt_parts = []
+        # 3. Costruzione Contenuti
+        contents = []
 
-        # Istruzioni Sistema
-        full_prompt_parts.append(system_instruction)
-
-        # Memoria a Lungo Termine
+        # A. Inseriamo i riassunti
         if summaries:
-            full_prompt_parts.append("\nRIASSUNTO EVENTI PASSATI:")
-            for s in summaries:
-                full_prompt_parts.append(f"- {s}")
+            summary_text = "RIASSUNTO EVENTI PASSATI:\n" + "\n".join(f"- {s}" for s in summaries)
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=summary_text)]))
+            contents.append(
+                types.Content(role="model", parts=[types.Part.from_text(text="Ricevuto.")]))
 
-        # Storia Recente
-        full_prompt_parts.append("\nSTORIA RECENTE:")
+        # B. Storia Recente
         for msg in history:
-            role = "User" if msg['role'] == 'user' else "Master"
-            full_prompt_parts.append(f"{role}: {msg['content']}")
+            role = "user" if msg['role'] == 'user' else "model"
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg['content'])]))
 
-        # Input Attuale
-        full_prompt_parts.append(f"\nUser: {user_input}")
+        # C. Input Attuale
+        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_input)]))
 
-        # 2. Chiamata a Gemini
+        # 4. Configurazione
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.9,
+            top_p=0.95,
+            top_k=40,
+            max_output_tokens=2048,
+            response_mime_type="text/plain"
+        )
+
+        # 5. Chiamata API
         try:
-            response = self.model.generate_content(full_prompt_parts)
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=contents,
+                config=config
+            )
+
             raw_text = response.text
+            if not raw_text:
+                raise ValueError("Risposta vuota dal modello")
+
             return self._parse_output(raw_text)
 
         except Exception as e:
             print(f"❌ Errore Generazione Gemini: {e}")
             return {
-                "text": "La connessione neurale è instabile...",
+                "text": "La connessione neurale è instabile... (Errore API)",
                 "visual_en": "",
                 "tags_en": []
             }
 
     def summarize_history(self, messages: List[Dict]) -> str:
-        """Chiede a Gemini di riassumere i messaggi."""
-        if not self.model: return "Dati persi."
-
-        prompt = "Riassumi in 2 frasi concise (nomi, luoghi, azioni chiave):\n"
+        if not self.client: return "Dati persi."
+        prompt_text = "Riassumi in 2 frasi concise:\n"
         for m in messages:
-            prompt += f"{m['role']}: {m['content']}\n"
-
+            prompt_text += f"{m['role']}: {m['content']}\n"
         try:
-            resp = self.model.generate_content(prompt)
-            return resp.text.strip()
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=prompt_text
+            )
+            return response.text.strip()
         except:
             return "Riassunto non disponibile."
 
     def _parse_output(self, raw_text: str) -> Dict[str, Any]:
-        """Estrae JSON e testo pulito."""
         result = {
             "text": raw_text,
             "visual_en": "",
@@ -127,12 +154,16 @@ class LLMClient:
             "updates": {}
         }
 
-        # Regex per trovare ```json ... ```
+        # Cerca JSON
         json_match = re.search(r"```json\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
+        if not json_match:
+            json_match = re.search(r"(\{.*\})", raw_text, re.DOTALL)
 
         if json_match:
             json_str = json_match.group(1)
-            result["text"] = raw_text.replace(json_match.group(0), "").strip()
+            clean_text = raw_text.replace(json_match.group(0), "").strip()
+            clean_text = clean_text.replace("```json", "").replace("```", "").strip()
+            result["text"] = clean_text
 
             try:
                 data = json.loads(json_str)

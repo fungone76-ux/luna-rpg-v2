@@ -1,0 +1,86 @@
+/* file: ui/styles.qss */
+
+/* Finestra Principale */
+QMainWindow {
+    background-color: #f0f0f0; /* Grigio chiaro neutro */
+}
+
+/* Titoli */
+QLabel {
+    font-family: "Segoe UI", sans-serif;
+    color: #3b2410; /* Marrone scuro */
+}
+
+/* --- BOX STATISTICHE (Stile Codice Antico) --- */
+#StatsBox {
+    background-color: #f7f2e8; /* Crema */
+    border: 1px solid #c8b49a;
+    font-family: "Consolas", monospace;
+    font-size: 14px;
+    color: #000;
+    padding: 5px;
+}
+
+/* --- LIBRO STORIA (Stile Romanzo) --- */
+#StoryArea {
+    background-color: #fdf6e3; /* Carta antica */
+    border: 2px solid #d6c4a0;
+    border-radius: 6px;
+    color: #2b2b2b;
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.6;
+    padding: 15px;
+}
+
+/* --- INPUT UTENTE --- */
+QLineEdit {
+    background-color: #ffffff;
+    border: 2px solid #888;
+    border-radius: 8px;
+    padding: 8px;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 14px;
+    color: #000;
+}
+
+QLineEdit:focus {
+    border: 2px solid #d6c4a0;
+}
+
+/* --- PULSANTI --- */
+QPushButton {
+    background-color: #e1d5c9;
+    border: 1px solid #b0a293;
+    border-radius: 4px;
+    padding: 6px 12px;
+    color: #3e2b1f;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #f0e6dc;
+    border-color: #8c7b6c;
+}
+
+QPushButton:pressed {
+    background-color: #d1c4b8;
+}
+
+QPushButton:disabled {
+    background-color: #e0e0e0;
+    color: #888;
+    border: 1px solid #ccc;
+}
+
+/* --- LABEL IMMAGINE --- */
+#ImageLabel {
+    background-color: #000;
+    border: 2px solid #444;
+    color: #eee;
+}
+
+/* Separatori */
+QFrame[frameShape="4"] { /* HLine */
+    color: #d6c4a0;
+}
