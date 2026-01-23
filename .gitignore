@@ -183,3 +183,4 @@ google_credentials.json
 STORAGE/
 /storage
 /old
+check_models.py

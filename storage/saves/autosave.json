@@ -1,14 +1,14 @@
 {
   "meta": {
     "world_id": "school_life",
-    "created_at": 1769197796.599255,
-    "turn_count": 2
+    "created_at": 1769201858.2985363,
+    "turn_count": 11
   },
   "game": {
-    "time_of_day": "Morning",
-    "location": "School Entrance Gate",
+    "time_of_day": "Afternoon",
+    "location": "School Restroom",
     "companion_name": "Luna",
-    "current_outfit": "teacher_suit",
+    "current_outfit": "janitor_uniform",
     "inventory": [],
     "gold": 0,
     "hp": 20,
@@ -18,8 +18,8 @@
       "charisma": 10
     },
     "affinity": {
-      "Luna": 0,
-      "Stella": 0,
+      "Luna": 1,
+      "Stella": 6,
       "Maria": 0
     },
     "quest_log": [
@@ -30,8 +30,51 @@
   "history": [
     {
       "role": "model",
-      "content": "Ti trovi di fronte al cancello della \"Da Vinci\" High School, il sole primaverile ti accarezza il viso. L'aria è pregna di eccitazione e aspettative per il tuo primo giorno. Mentre ti guardi intorno, noti una figura che si distingue tra gli studenti chiassosi. È una donna alta, elegante, appoggiata al muro vicino all'entrata. I suoi capelli corvini sono raccolti in uno chignon severo, e il suo sguardo è penetrante. Sembra osservare tutti con un'aria di superiorità. Il suo portamento è quello di chi ha il controllo, e una sottile aura di autorità la circonda."
+      "content": "Stella osserva lo schermo con occhio critico, ma un sorrisetto compiaciuto le increspa le labbra mentre nota l'angolazione strategica.\n\"Mmh, ammetto che non fa schifo. Hai occhio per le... prospettive importanti.\"\nSi sporge verso di te per mostrarti lo zoom sulle sue gambe, premendo inavvertitamente la spalla contro la tua mentre l'aria si fa improvvisamente calda."
+    },
+    {
+      "role": "user",
+      "content": "Potrei fartene anche di migliori se mi dai la possibilità... mentre lo dico tiro fuori il libro di matematica in quanto sta iniziando la lezione tra poco."
+    },
+    {
+      "role": "model",
+      "content": "Stella ridacchia e si avvicina ancora di più, sussurrandoti all'orecchio con voce maliziosa: \"Tieniti libero per il pomeriggio, allora. Forse ti concederò un'esclusiva.\"\nImprovvisamente la porta si spalanca e Luna entra in classe, sbattendo il registro sulla cattedra con un tonfo che gela il sangue.\n\"Silenzio assoluto. Aprite i libri a pagina 45, e guai a chi fiata.\""
+    },
+    {
+      "role": "user",
+      "content": "non capisco perche sia sempre cosi arrabbiata la professoressa mi domando in silenzio. obbedisco e apro il libro alla pagina indicata. che strano il primo giorno di scuola e non ha fatto l appello mah penso..."
+    },
+    {
+      "role": "model",
+      "content": "Luna scrive furiosamente alla lavagna, la gonna tesa pericolosamente sui fianchi mentre si allunga verso l'alto, offrendo uno spettacolo che zittisce l'intera aula.\nSi volta di scatto, puntando il gesso dritto verso il tuo naso con autorità glaciale.\n\"Vedo che hai tempo per sognare ad occhi aperti. Vieni subito alla lavagna a risolvere questa equazione.\""
+    },
+    {
+      "role": "user",
+      "content": "nulla di che una banale equazione di secondo grado che risolvo in 2 minuti... mentre lo faccio faccio finta che mi cada il gessetto per raccoglierlo e guardare le gambe della professoressa piu da vicino senza dare sospetti"
+    },
+    {
+      "role": "model",
+      "content": "Ti chini rapido e la vista è vertiginosa: le gambe tornite della professoressa, avvolte nel nylon scuro, sono a pochi centimetri dal tuo viso.\nQuando ti rialzi trionfante, Luna ti sta fissando con le braccia incrociate, intuendo esattamente dove hai guardato con un misto di fastidio e imbarazzo.\n\"Il risultato è corretto, ma la tua 'goffaggine' è sospetta. Torna al posto e tieni gli occhi all'altezza degli occhi.\""
+    },
+    {
+      "role": "user",
+      "content": "ripongo il gessetto e con sguardo trionfale guardo Stella che mi guarda ammirata...lei non sarebbe stata in grado di risolverla!"
+    },
+    {
+      "role": "model",
+      "content": "Stella ti guarda con un sorrisetto calcolatore, per nulla impressionata dai numeri ma dalla tua evidente utilità pratica.\n\"Non montarti la testa, secchione. Ma visto che sei così bravo, potresti farmi anche i compiti di recupero oltre alle foto.\"\nLa campanella suona improvvisamente, liberando la classe per la pausa pranzo e lasciandoti con una fame da lupi."
+    },
+    {
+      "role": "user",
+      "content": "prima di andare a mangiare devo correre in bagno in quanto mi scappa molto"
+    },
+    {
+      "role": "model",
+      "content": "Ti fiondi nel bagno dei maschi, ma ti fermi di colpo per non inciampare in un secchio d'acqua sporca piazzato proprio all'ingresso.\nMaria, la bidella, alza lo sguardo da terra, visibilmente irritata mentre strizza uno straccio con forza eccessiva.\n\"Sei cieco? Sto pulendo qui. Se devi farla, o impari a volare o aspetti che si asciughi.\""
     }
   ],
-  "summary_log": []
+  "summary_log": [
+    "Arrivato in ritardo alla \"Da Vinci\", provi a giustificarti con una scusa inventata che Luna respinge freddamente, assegnandoti una punizione. Rassegnato e borbottando, ti dirigi verso l'aula della prima C per iniziare le lezioni.",
+    "Ecco il riassunto in due frasi:\n\nIgnorando i modi sgarbati di Stella, ti siedi accanto a lei e ti offri di sfruttare le tue competenze fotografiche per scattarle una foto migliore. Lei ti mette alla prova e tu, studiando meticolosamente l'inquadratura per esaltare la sua bellezza, esegui lo scatto e gliela mostri in attesa del suo giudizio."
+  ]
 }

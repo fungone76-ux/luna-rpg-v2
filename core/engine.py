@@ -69,18 +69,18 @@ class GameEngine:
 
         final_input = user_input
 
-        # --- FIX INTRODUZIONE ---
+        # --- FIX INTRODUZIONE VELOCE ---
         if is_intro:
             companion_name = state["game"].get("companion_name", "Unknown")
             world_name = self.world_data.get("meta", {}).get("name", "Unknown World")
 
-            # Costruiamo un contesto iniziale solido
+            # Costruiamo un contesto minimale e veloce
             final_input = (
                 f"[SYSTEM INSTRUCTION]: START THE GAME NOW.\n"
                 f"LANGUAGE: ITALIAN.\n"
-                f"CONTEXT: Begin the story in {world_name}. The protagonist meets {companion_name}.\n"
-                f"ACTION: Narrate the opening scene and describe {companion_name}'s appearance.\n"
-                f"IMPORTANT: Follow the OUTPUT FORMAT: First write the Narration in Italian, THEN provide the JSON block."
+                f"CONTEXT: You are in {world_name}. The protagonist meets {companion_name}.\n"
+                f"ACTION: Start with a SHORT, IMMEDIATE hook (Max 3 lines). No long descriptions.\n"  # <--- VINCOLO QUI
+                f"IMPORTANT: First write the short Narration in Italian, THEN provide the JSON."
             )
 
         response_data = self.llm.generate_response(
