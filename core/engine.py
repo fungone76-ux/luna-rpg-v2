@@ -1,6 +1,8 @@
 # file: core/engine.py
 import time
-from typing import Dict, List, Tuple, Optional
+import os
+import json
+from typing import Dict, List
 
 from core.world_loader import WorldLoader
 from core.state_manager import StateManager
@@ -29,7 +31,6 @@ class GameEngine:
     def start_new_game(self, world_id: str, companion_name: str = "Luna"):
         self.world_data = self.loader.load_world_data(f"{world_id}.yaml")
         if not self.world_data:
-            # Fallback
             available = self.loader.list_available_worlds()
             if available:
                 self.world_data = self.loader.load_world_data(f"{available[0]['id']}.yaml")
@@ -61,26 +62,25 @@ class GameEngine:
         if not is_intro:
             self._manage_long_term_memory()
 
+        # Carica il Prompt dal file esterno
         system_prompt = self._build_system_prompt()
         history = state.get("history", [])
         summaries = state.get("summary_log", [])
 
         final_input = user_input
 
-        # --- FIX INTRODUZIONE + FIX PROSPETTIVA + FIX SCONOSCIUTI ---
+        # --- FIX INTRODUZIONE ---
         if is_intro:
             companion_name = state["game"].get("companion_name", "Unknown")
+            world_name = self.world_data.get("meta", {}).get("name", "Unknown World")
+
+            # Costruiamo un contesto iniziale solido
             final_input = (
                 f"[SYSTEM INSTRUCTION]: START THE GAME NOW.\n"
                 f"LANGUAGE: ITALIAN.\n"
-                f"SCENE: Morning, First Day of School, Entrance Gate.\n"
-                f"CONTEXT: It is the very first day. You and {companion_name} are STRANGERS. You have never met before.\n"  # <--- ECCO IL PEZZO MANCANTE!
-                f"ACTION: The protagonist arrives at school and sees {companion_name}.\n"
-                f"RULES:\n"
-                f"1. Narrate in 'Tu' (You) perspective. Example: 'Tu arrivi davanti al cancello...'.\n"
-                f"2. Do NOT describe the protagonist's feelings (like 'il mio cuore batte'). Leave that to the player.\n"
-                f"3. Do NOT use First Person ('Io') for narration.\n"
-                f"4. Describe the scene and {companion_name}'s outfit."
+                f"CONTEXT: Begin the story in {world_name}. The protagonist meets {companion_name}.\n"
+                f"ACTION: Narrate the opening scene and describe {companion_name}'s appearance.\n"
+                f"IMPORTANT: Follow the OUTPUT FORMAT: First write the Narration in Italian, THEN provide the JSON block."
             )
 
         response_data = self.llm.generate_response(
@@ -95,6 +95,8 @@ class GameEngine:
 
         if not is_intro:
             state["history"].append({"role": "user", "content": final_input})
+
+        # Salva la risposta testuale nella storia
         state["history"].append({"role": "model", "content": response_data["text"]})
 
         self.state_manager.save_game("autosave.json")
@@ -103,13 +105,16 @@ class GameEngine:
     # --- EYES ---
     def process_image_generation(self, visual_en: str, tags_en: List[str]) -> str:
         game_state = self.state_manager.current_state.get("game", {})
+        # Chiama il builder corretto che replica il vecchio metodo
         pos, neg = build_image_prompt(visual_en, tags_en, game_state, self.world_data)
 
-        print(f"\n🎨 [SD PROMPT]: {pos[:200]}...")
+        # Debug: Stampa il prompt finale per vedere se "wearing clothing" è sparito
+        print(f"\n🎨 [SD PROMPT FINAL]: {pos[:200]}...")
         return self.imager.generate_image(pos, neg)
 
     # --- VOICE ---
     def process_audio(self, text: str):
+        if not text: return
         name = self.state_manager.current_state["game"].get("companion_name", "Narrator")
         self.audio.play_voice(text, name)
 
@@ -146,12 +151,10 @@ class GameEngine:
 
         char_name = game.get('companion_name')
         current_aff = game.get("affinity", {}).get(char_name, 0)
-
         partner_personality = self._get_affinity_personality(char_name, current_aff)
 
         all_companions = list(self.world_data.get("companions", {}).keys())
         other_chars = [c for c in all_companions if c != char_name]
-
         npc_instructions = ""
         for npc in other_chars:
             npc_aff = game.get("affinity", {}).get(npc, 0)
@@ -160,62 +163,31 @@ class GameEngine:
 
         story_struct = meta.get("story_structure", {})
         key_events = story_struct.get("key_events", [])
-
         events_str = "POSSIBLE PLOT POINTS:\n"
         for e in key_events: events_str += f"- [KEY] {e}\n"
 
-        # --- REGOLE AGGIORNATE ---
-        return f"""
-        You are the Game Master of a {meta.get('genre')} game.
-        World: {meta.get('name')}
-        Lore: {meta.get('world_lore')}
+        prompt_vars = {
+            "genre": meta.get('genre', 'RPG'),
+            "world_name": meta.get('name', 'Unknown World'),
+            "world_lore": meta.get('world_lore', 'No lore available.'),
+            "events_str": events_str,
+            "char_name": char_name,
+            "partner_personality": partner_personality,
+            "npc_instructions": npc_instructions,
+            "time_of_day": game.get('time_of_day', 'Morning'),
+            "location": game.get('location', 'Unknown'),
+            "current_outfit": game.get('current_outfit', 'default')
+        }
 
-        ==================================================
-        🔴 CRITICAL RULES:
-        1. **LANGUAGE**: Narrate in **ITALIAN**. JSON in **ENGLISH**.
-        2. **PERSPECTIVE**: Narrate in **SECOND PERSON** ("Tu", "You"). 
-           - CORRECT: "Tu vedi Luna avvicinarsi."
-           - WRONG: "Io vedo Luna." (Do not use "Io" for narration).
-        3. **NO GOD-MODDING**: 
-           - Do NOT describe the Protagonist's internal thoughts or feelings.
-           - Only describe external events and NPC reactions. Let the player decide how they feel.
-        ==================================================
+        prompt_path = "prompts/system_prompt.txt"
 
-        ### 📖 STORY & EVENTS
-        {events_str}
+        if not os.path.exists(prompt_path):
+            return f"You are a Game Master. Context: {prompt_vars}"
 
-        ### 💘 RELATIONSHIP SYSTEM
-        **ACTIVE PARTNER ({char_name}):**
-        {partner_personality}
-
-        **OTHER NPCs:**
-        {npc_instructions}
-
-        ### ⌚ TIME & CYCLE
-        Current Cycle: MORNING -> AFTERNOON -> NIGHT.
-        Current Time: {game.get('time_of_day', 'Morning')}
-        Current Location: {game.get('location')}
-
-        **INSTRUCTION**: Update `time_of_day` in the JSON if the story advances naturally (e.g., classes end -> Afternoon).
-
-        ### 🎬 VISUAL DIRECTOR
-        - **Subject**: Describe the scene for an AI Image Generator.
-        - **Multi-Character**: If multiple girls are present, mention ALL of them in `visual_en`.
-        - **Outfit**: Ensure description matches: {game.get('current_outfit')}
-
-        ### OUTPUT FORMAT
-        ```json
-        {{
-           "visual_en": "Cinematic shot of [Subject], [Action], [Environment], [Lighting]",
-           "tags_en": ["tag1", "tag2"],
-           "updates": {{ 
-               "time_of_day": "Morning/Afternoon/Night",
-               "location": "...", 
-               "affinity_change": {{ "{char_name}": 1 }},
-               "stat_changes": {{ "charisma": 1, "mind": 0, "strength": 0 }},
-               "current_outfit": "...",
-               "add_item": "..."
-           }}
-        }}
-        ```
-        """
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                template = f.read()
+            return template.format(**prompt_vars)
+        except Exception as e:
+            print(f"❌ Error formatting prompt: {e}")
+            return "System Error: Prompt generation failed."

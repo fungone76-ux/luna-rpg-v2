@@ -47,7 +47,7 @@ class LLMClient:
 
         # LISTA MODELLI (Priorità alla stabilità)
         candidates = [
-            "gemini-2.0-flash",
+            "gemini-3.0-pro",
             "gemini-1.5-pro",
             "gemini-1.5-flash"
         ]

@@ -1,14 +1,11 @@
-# file: worlds/school_life.yaml
 meta:
   id: "school_life"
   name: "High School Harem"
   genre: "Dating Sim, School Life, Romance, Erotic (18+)"
   world_lore: |
     Setting: "Da Vinci" High School. Spring Term.
-    # --- AGGIUNTO: REGOLA DEL PRIMO GIORNO ---
     CURRENT STATUS: DAY 1 - FIRST DAY OF SCHOOL.
     RELATIONSHIPS: Total Strangers. No one knows the protagonist yet.
-    # -----------------------------------------
     The protagonist is a student aiming to conquer the hearts of the school staff and classmates.
     The atmosphere is charged with sexual tension.
     Time Cycle: MORNING (Classes) -> AFTERNOON (Clubs/Cleaning) -> NIGHT (Home/Dorm).
@@ -40,32 +37,18 @@ meta:
       - "Confiscated Item: Luna takes your phone and finds 'interesting' photos. She wants an explanation in private."
       - "Power Outage: The school goes pitch black. Someone grabs your hand... and more."
 
+# Visual Style: Lasciato vuoto o minimo perché gestito interamente da prompt_builder.py
 visual_style:
-  # GLOBALE: Ho pulito la sintassi della virgola e mantenuto il tuo LoRA PonyV2
-  base_prompt: "score_9, score_8_up, masterpiece, best quality, photorealistic, raw photo, hyperrealistic, 8k, detailed skin, texture, sweat, cinematic lighting, dslr, soft focus, NSFW, <lora:FantasyWorldPonyV2:0.40>"
-
-  # NEGATIVO: Ho rimosso i doppioni e pulito la lista. MANTENUTO IL DIVIETO OCCHIALI.
-  negative_prompt: "score_5, score_4, low quality, bad anatomy, cartoon, anime, 3d render, painting, drawing, illustration, sketch, semi-realistic, monochrome, greyscale, text, watermark, (same face:1.4), (twins:1.4), (clones:1.4), glasses, sunglasses, eyewear, spectacles, (glasses:1.5), (wearing glasses:1.5), deformed, worst face, extra fingers"
-
-  location_prompts:
-    "Classroom": "classroom, sunlight through windows, chalkboard, desks, school uniform"
-    "Hallway": "school hallway, lockers, polished floor, students in background"
-    "Staff Room": "office room, messy desk, books, coffee maker, sunset light"
-    "Storage Room": "cramped storage room, cleaning tools, dim light, dust, intimate"
-    "Bedroom": "bedroom, night, messy bed, computer screen light, posters"
-    "Gym": "school gymnasium, basketball hoop, wooden floor, sweat"
-    "Infirmary": "school infirmary, white curtains, medical bed, sterile smell"
-    "School Entrance Gate": "school entrance, iron gates, cherry blossoms, morning light"
+  loras: [] # Aggiungi qui eventuali LoRA ambientali globali se servono
 
 companions:
   Luna:
-    base_prompt: "stsdebbie, dynamic pose, (thick thighs:0.45), big breasts, full body, 1girl, mature woman, brown hair, loose hair, sweaty skin, cleavage, <lora:stsDebbie-10e:0.7> <lora:Expressive_H-000001:0.20>, <lora:FantasyWorldPonyV2:0.40>"
     default_outfit: "teacher_suit"
     wardrobe:
       teacher_suit: "tight grey pencil skirt, white buttoned blouse, black pantyhose"
       gym_substitute: "tight spandex yoga pants, sports bra, whistle around neck, sweaty skin"
       medical_gown: "white nurse coat, nothing underneath, cleavage, stethoscope"
-      lingerie: "black lace lingerie, garter belt, stockings, seductive pose"
+      lingerie: "black lace lingerie, garter belt, stockings"
       nude: "nude, naked, curvy body, nipples, pussy"
 
     personality_tiers:
@@ -74,10 +57,9 @@ companions:
       50: "TIER 3 (Lover): Obsessed mistress. Jealous, possessive, wants to break school rules with you."
 
   Stella:
-    base_prompt: "1girl, alice_milf_catchers, massive breasts, cleavage, blonde hair, messy hair, beautiful blue eyes, shapely legs, hourglass figure, skinny body, narrow waist, wide hips, <lora:alice_milf_catchers_lora:0.7> <lora:Expressive_H:0.2>, <lora:FantasyWorldPonyV2:0.40>"
     default_outfit: "uniform_mod"
     wardrobe:
-      uniform_mod: "school uniform, micro miniskirt, open cardigan, loose socks, cleavage"
+      uniform_mod: "school uniform, micro miniskirt, open cardigan, loose socks"
       swimsuit: "micro bikini, school pool setting, wet skin"
       prom_dress: "elegant red evening gown, high slit, strapless"
       nude: "nude, naked, tan lines, blushing, small breasts"
@@ -88,7 +70,6 @@ companions:
       50: "TIER 3 (Girlfriend): Totally in love. Clingy, sends lewd photos during class, wants to do it in the bathroom."
 
   Maria:
-    base_prompt: "stsSmith, 1girl, mature female, (middle eastern woman:1.5), veiny breasts, black hair, short hair, evil smile, <lora:stsSmith-10e:0.65> <lora:Expressive_H:0.2>, <lora:FantasyWorldPonyV2:0.40>"
     default_outfit: "work_jumpsuit"
     wardrobe:
       work_jumpsuit: "blue mechanic jumpsuit, unzipped to navel, no bra, dirty work boots"

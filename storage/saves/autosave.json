@@ -1,14 +1,14 @@
 {
   "meta": {
     "world_id": "school_life",
-    "created_at": 1769115517.5936673,
+    "created_at": 1769197796.599255,
     "turn_count": 2
   },
   "game": {
     "time_of_day": "Morning",
     "location": "School Entrance Gate",
     "companion_name": "Luna",
-    "current_outfit": "school_uniform",
+    "current_outfit": "teacher_suit",
     "inventory": [],
     "gold": 0,
     "hp": 20,
@@ -30,7 +30,7 @@
   "history": [
     {
       "role": "model",
-      "content": "* * *\n\nTi avvicini al cancello principale della \"Da Vinci\" proprio mentre il sole inizia a scaldare l'aria frizzante del mattino. Studenti chiacchierano animatamente, alcuni corrono per non arrivare in ritardo.\n\nLa tua attenzione viene catturata da una figura familiare: la Professoressa Luna. È appoggiata a una colonna, con un registro degli studenti in mano. Indossa un tailleur grigio scuro, impeccabile, che ne sottolinea la figura. I suoi capelli corvini sono raccolti in una crocchia severa, ma qualche ciocca sfugge incorniciandole il viso. Ti osserva con i suoi occhi scuri mentre ti avvicini."
+      "content": "Ti trovi di fronte al cancello della \"Da Vinci\" High School, il sole primaverile ti accarezza il viso. L'aria è pregna di eccitazione e aspettative per il tuo primo giorno. Mentre ti guardi intorno, noti una figura che si distingue tra gli studenti chiassosi. È una donna alta, elegante, appoggiata al muro vicino all'entrata. I suoi capelli corvini sono raccolti in uno chignon severo, e il suo sguardo è penetrante. Sembra osservare tutti con un'aria di superiorità. Il suo portamento è quello di chi ha il controllo, e una sottile aura di autorità la circonda."
     }
   ],
   "summary_log": []

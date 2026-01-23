@@ -7,52 +7,66 @@ try:
 except ImportError:
     apply_sd_prompt_rules = None
 
+# --- PROMPT BASE DEFINITIVI (I tuoi) ---
+BASE_PROMPTS = {
+    "Luna": (
+        "score_9, score_8_up, masterpiece, photorealistic,  detailed, atmospheric, "
+        "stsdebbie, dynamic pose, 1girl, mature woman, brown hair, shiny skin, head tilt, massive breasts, cleavage, "
+        "<lora:stsDebbie-10e:0.7> <lora:Expressive_H-000001:0.20><lora:FantasyWorldPonyV2:0.40>"
+    ),
+    "Stella": (
+        "score_9, score_8_up, masterpiece, NSFW, photorealistic, 1girl, "
+        "alice_milf_catchers, massive breasts, cleavage, blonde hair, beautiful blue eyes, "
+        "shapely legs, hourglass figure, skinny body, narrow waist, wide hips, "
+        "<lora:alice_milf_catchers_lora:0.7> <lora:Expressive_H:0.2>"
+    ),
+    "Maria": (
+        "score_9, score_8_up, stsSmith, ultra-detailed, realistic lighting, 1girl, "
+        "mature female, (middle eastern woman:1.5), veiny breasts, black hair, short hair, evil smile, glowing magic, "
+        "<lora:stsSmith-10e:0.65> <lora:Expressive_H:0.2> <lora:FantasyWorldPonyV2:0.40>"
+    )
+}
 
-def _get_char_prompt_data(char_name: str, char_data: Dict, game_state: Dict, is_group: bool) -> str:
-    """
-    Costruisce la stringa base + outfit.
-    Gestisce in modo intelligente '1girl' e 'wearing'.
-    """
-    # 1. Base Prompt (LoRA ecc)
-    base = char_data.get("base_prompt", "")
+# Fallback per NPC generici
+NPC_BASE = "score_9, score_8_up, masterpiece, photorealistic, 1girl, detailed face, cinematic lighting"
 
-    # SE siamo in gruppo, togliamo i riferimenti singoli per non confondere l'IA
-    if is_group:
-        base = base.replace("1girl,", "").replace("1girl", "").strip()
+# Negative Prompt Fisso (Il tuo)
+NEGATIVE_PROMPT = "score_5, score_4, low quality, anime, monochrome, deformed, bad anatomy, worst face, extra fingers, cartoon, 3d render"
 
-    # 2. Outfit Logic
-    current_partner = game_state.get("companion_name", "")
+
+def _get_outfit_string(char_name: str, game_state: Dict, world_data: Dict) -> str:
+    """Recupera l'outfit corrente e lo formatta."""
+    # 1. Identifica la chiave outfit (es. "teacher_suit")
+    current_outfit_key = "default"
+    if char_name == game_state.get("companion_name"):
+        current_outfit_key = game_state.get("current_outfit", "default")
+    else:
+        # Per NPC, usa il default definito nello YAML
+        companions_db = world_data.get("companions", {})
+        char_data = companions_db.get(char_name, {})
+        current_outfit_key = char_data.get("default_outfit", "default")
+
+    # 2. Cerca la descrizione nel Wardrobe dello YAML
+    companions_db = world_data.get("companions", {})
+    char_data = companions_db.get(char_name, {})
     wardrobe = char_data.get("wardrobe", {})
 
-    outfit_desc = ""
-    # Se è la partner attuale, usa l'outfit dallo stato
-    if char_name == current_partner:
-        outfit_key = game_state.get("current_outfit", "default")
-        # Fallback intelligente: se l'outfit non esiste, cerca 'default', altrimenti 'clothing'
-        outfit_desc = wardrobe.get(outfit_key, wardrobe.get("default", "clothing"))
+    outfit_desc = wardrobe.get(current_outfit_key, "")
+
+    # Fallback
+    if not outfit_desc:
+        outfit_desc = wardrobe.get("default", "clothing")
+
+    # 3. Pulizia e Iniezione
+    clean_desc = str(outfit_desc).lower().replace("wearing ", "").strip()
+    clean_desc = clean_desc.replace("(", "").replace(")", "")
+
+    nude_keywords = ["naked", "nude", "undressed", "nothing"]
+
+    if any(k in clean_desc for k in nude_keywords):
+        return f"(nude:1.3), {clean_desc}"
     else:
-        # Se è un NPC, usa il suo default
-        default_key = char_data.get("default_outfit", "default")
-        outfit_desc = wardrobe.get(default_key, "clothing")
-
-    # 3. Controllo "Wearing" (BLINDATO)
-    # Rimuoviamo parentesi extra se presenti nel YAML per pulizia
-    outfit_clean = outfit_desc.replace("(", "").replace(")", "")
-
-    final_outfit_str = ""
-
-    # Se è nuda, non aggiungiamo 'wearing'
-    if any(x in outfit_clean.lower() for x in ["nude", "naked", "nothing"]):
-        final_outfit_str = f"({outfit_clean}:1.2)"
-    else:
-        # Se c'è già un verbo di vestizione, non aggiungiamo nulla
-        if any(v in outfit_clean.lower() for v in ["wearing", "dressed", "clad", "suit"]):
-            final_outfit_str = f"({outfit_clean}:1.2)"
-        else:
-            # Altrimenti aggiungiamo 'wearing'
-            final_outfit_str = f"(wearing {outfit_clean}:1.2)"
-
-    return f"{base}, {final_outfit_str}"
+        return f"(wearing {clean_desc}:1.3)"
 
 
 def build_image_prompt(
@@ -61,93 +75,67 @@ def build_image_prompt(
         game_state: Dict,
         world_data: Dict
 ) -> Tuple[str, str]:
-    """
-    Generatore di Prompt Unificato e Pulito.
-    """
-
-    style_data = world_data.get("visual_style", {})
-    base_env_prompt = style_data.get("base_prompt", "masterpiece, best quality")
-
-    # Negativo rinforzato contro i cloni
-    base_negative = style_data.get("negative_prompt", "low quality")
-    forced_negative = (
-        f"{base_negative}, (same face:1.4), (twins:1.4), (clones:1.4), "
-        "monochrome, greyscale, text, watermark, (same hair color:1.2), mutation, deformed"
-    )
-
-    visual_text_lower = visual_en.lower()
-    # Uniamo i tag LLM in una stringa pulita
-    tags_string = ", ".join(tags_en).lower()
-    full_text_search = f"{visual_text_lower} {tags_string}"
-
-    companions_db = world_data.get("companions", {})
-
-    # --- 1. SCANNER PERSONAGGI ---
+    # 1. Identifica i personaggi presenti
+    full_text = (visual_en + " " + " ".join(tags_en)).lower()
     found_chars = []
 
-    # Cerca i nomi nel testo
-    for name in companions_db.keys():
-        if name.lower() in full_text_search:
+    for name in BASE_PROMPTS.keys():
+        if name.lower() in full_text:
             found_chars.append(name)
 
-    # Fallback: Se non trova nessuno, metti la compagna attuale
-    current_partner = game_state.get("companion_name")
-    if not found_chars and current_partner:
-        found_chars.append(current_partner)
+    # Se vuoto, usa la compagna attiva
+    if not found_chars:
+        found_chars.append(game_state.get("companion_name", "Luna"))
 
-    # Rimuovi duplicati mantenendo l'ordine
     found_chars = list(dict.fromkeys(found_chars))
+    is_group = len(found_chars) >= 2
 
-    is_group_scene = len(found_chars) >= 2
+    # 2. Costruzione Prompt
+    prompt_parts = []
 
-    # --- 2. COSTRUZIONE PROMPT ---
-    prompt_parts = [base_env_prompt]
+    if is_group:
+        prompt_parts.append(f"{len(found_chars)}girls")
 
-    # Header Gruppo (se necessario)
-    if is_group_scene:
-        count_tag = f"{len(found_chars)}girls"
-        # Aggiungiamo BREAK per separare meglio i concetti se usi A1111/Forge, altrimenti virgole
-        prompt_parts.append(f"({count_tag}:1.3), interacting, distinct females")
-
-    # Ciclo Unificato sui Personaggi (Così il controllo wearing vale per TUTTI)
     for char_name in found_chars:
-        char_data = companions_db[char_name]
-        # Chiamiamo la funzione helper corretta
-        p_data = _get_char_prompt_data(char_name, char_data, game_state, is_group_scene)
-        prompt_parts.append(p_data)
+        # A. Base Prompt (Dal Dizionario Hardcoded)
+        base = BASE_PROMPTS.get(char_name, NPC_BASE)
+        if is_group:
+            base = base.replace("1girl,", "").replace("1girl", "").strip()
 
-        # Se è un gruppo, aggiungiamo un BREAK per evitare che i capelli si mischino
-        if is_group_scene:
+        # B. Outfit (Iniettato dallo Stato)
+        outfit_str = _get_outfit_string(char_name, game_state, world_data)
+
+        prompt_parts.append(f"{base}, {outfit_str}")
+
+        if is_group:
             prompt_parts.append("BREAK")
 
-    # --- 3. AMBIENTE E AZIONE ---
-    # Descrizione scena LLM pulita
-    clean_visual = visual_en.replace(".", ",").replace("(", "").replace(")", "")
-    prompt_parts.append(f"({clean_visual}:1.1)")
+    # 3. Scena & Tags (Dall'LLM)
+    # Rimuoviamo tag di qualità doppi se l'LLM li ha messi
+    banned = ["score_9", "score_8_up", "masterpiece", "best quality", "1girl", "photorealistic"]
+    clean_tags = [t for t in tags_en if t.lower() not in banned]
 
-    # Location Anchor (solo se non già detta)
+    if clean_tags:
+        prompt_parts.append(", ".join(clean_tags))
+
+    if visual_en:
+        prompt_parts.append(f"({visual_en}:1.1)")
+
+    # 4. Location (Dallo Stato, se non già descritta)
     loc = game_state.get("location", "")
-    if loc and loc.lower() not in visual_text_lower:
+    if loc and loc.lower() not in visual_en.lower():
         prompt_parts.append(f"background is {loc}")
 
-    # Tags LLM
-    if tags_en:
-        prompt_parts.append(", ".join(tags_en))
+    # Assemblaggio
+    separator = " " if is_group else ", "
+    full_prompt_str = separator.join([p.strip().strip(",") for p in prompt_parts if p])
 
-    # LoRAs Globali (Stile)
-    global_loras = style_data.get("loras", [])
-    if global_loras:
-        prompt_parts.extend(global_loras)
+    # Negative Prompt (con protezione anti-clone per gruppi)
+    final_negative = NEGATIVE_PROMPT
+    if is_group:
+        final_negative += ", (same face:1.4), (twins:1.4), (clones:1.4), (same hair color:1.2)"
 
-    # Assemblaggio finale
-    # Pulizia virgole doppie o spazi vuoti
-    full_prompt_str = ", ".join([p for p in prompt_parts if p and p != "BREAK"])
-
-    # Se usiamo BREAK, la formattazione è diversa (opzionale per compatibilità)
-    if "BREAK" in prompt_parts:
-        full_prompt_str = " ".join(prompt_parts)  # Usa spazi per i BREAK
-
-    return _finalize_prompt(full_prompt_str, forced_negative, tags_en, visual_en, full_text_search)
+    return _finalize_prompt(full_prompt_str, final_negative, tags_en, visual_en, full_text)
 
 
 def _finalize_prompt(pos, neg, tags, visual, context):
