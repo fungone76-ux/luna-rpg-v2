@@ -43,7 +43,7 @@ class LLMClient:
 
         # LISTA MODELLI (Priorità: Potenza -> Velocità)
         candidates = [
-            "gemini-2.0-flash-exp",  # Se hai accesso alla 2.0 Flash
+            "gemini-3-pro-preview",  # Se hai accesso alla 2.0 Flash
             "gemini-1.5-pro",
             "gemini-1.5-flash"
         ]

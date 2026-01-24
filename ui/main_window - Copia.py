@@ -1,9 +1,10 @@
 # file: ui/main_window.py
 import sys
+import random
 from typing import List
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QTextEdit, QLineEdit, QPushButton, QLabel, QFrame,
-                               QCheckBox, QFileDialog)
+                               QMessageBox, QCheckBox, QFileDialog)
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer
 
 from core.engine import GameEngine
@@ -60,7 +61,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Luna RPG v2 - Universal")
-        self.showMaximized()
+        self.resize(1200, 780)
 
         try:
             with open("ui/styles.qss", "r") as f:
@@ -87,7 +88,9 @@ class MainWindow(QMainWindow):
             else:
                 selected_world = choice.get("world_id", "school_life")
                 companion = choice.get("companion", "Luna")
+
                 print(f"🚀 Starting World: {selected_world} with {companion}")
+
                 self.engine.start_new_game(selected_world, companion)
                 self._handle_player_input(None, is_intro=True)
         else:
@@ -97,41 +100,36 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(25)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(15)
 
         # === LEFT COLUMN ===
         left_layout = QVBoxLayout()
-        left_layout.setSpacing(0)
+        left_layout.setSpacing(10)
 
-        # 1. STATUS PANEL (ALTEZZA FISSA ORA)
         self.status_panel = StatusPanel()
         left_layout.addWidget(self.status_panel)
 
-        # 2. VISUAL SCENE LABEL (SPOSTATA SOTTO I DATI)
-        # Margin top per staccarla dai box
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        left_layout.addWidget(line)
+
         lbl_scene = QLabel("Visual Scene")
-        lbl_scene.setAlignment(Qt.AlignCenter)
-        lbl_scene.setStyleSheet(
-            "font-size: 14pt; font-weight: bold; color: #3b2410; margin-top: 15px; margin-bottom: 5px;")
+        lbl_scene.setStyleSheet("font-size: 12pt; font-weight: bold;")
         left_layout.addWidget(lbl_scene)
 
-        # 3. IMAGE VIEWER
         self.img_viewer = InteractiveImageViewer()
         self.img_viewer.image_lbl.setObjectName("ImageLabel")
         left_layout.addWidget(self.img_viewer, 1)
 
-        # 4. NAVIGAZIONE
         nav_layout = QHBoxLayout()
         self.btn_prev = QPushButton("◀")
-        self.btn_prev.setFixedWidth(60)
-        self.btn_prev.setMinimumHeight(40)
+        self.btn_prev.setFixedWidth(40)
         self.btn_prev.clicked.connect(self._prev_image)
         self.btn_prev.setEnabled(False)
 
         self.btn_next = QPushButton("▶")
-        self.btn_next.setFixedWidth(60)
-        self.btn_next.setMinimumHeight(40)
+        self.btn_next.setFixedWidth(40)
         self.btn_next.clicked.connect(self._next_image)
         self.btn_next.setEnabled(False)
 
@@ -140,33 +138,30 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self.btn_next)
         left_layout.addLayout(nav_layout)
 
-        # 5. CONTROLLI
-        ctrl_layout = QHBoxLayout()
         self.chk_voice = QCheckBox("Voice Narrator")
         self.chk_voice.setChecked(True)
-        ctrl_layout.addWidget(self.chk_voice)
+        left_layout.addWidget(self.chk_voice)
 
         self.status_lbl = QLabel("Ready.")
-        self.status_lbl.setStyleSheet("color: #555; font-style: italic; font-size: 13px;")
-        ctrl_layout.addWidget(self.status_lbl)
-        ctrl_layout.addStretch()
+        self.status_lbl.setStyleSheet("color: #555; font-style: italic;")
+        left_layout.addWidget(self.status_lbl)
 
+        sl_layout = QHBoxLayout()
         btn_save = QPushButton("Save")
         btn_save.clicked.connect(self._on_save)
         btn_load = QPushButton("Load")
         btn_load.clicked.connect(self._on_load)
-        ctrl_layout.addWidget(btn_save)
-        ctrl_layout.addWidget(btn_load)
+        sl_layout.addWidget(btn_save)
+        sl_layout.addWidget(btn_load)
+        left_layout.addLayout(sl_layout)
 
-        left_layout.addLayout(ctrl_layout)
-
-        main_layout.addLayout(left_layout, 4)
+        main_layout.addLayout(left_layout, 2)
 
         # === RIGHT COLUMN ===
         right_layout = QVBoxLayout()
 
         lbl_story = QLabel("Story Log")
-        lbl_story.setStyleSheet("font-size: 16pt; font-weight: bold; color: #3b2410;")
+        lbl_story.setStyleSheet("font-size: 13pt; font-weight: bold; color: #3b2410;")
         right_layout.addWidget(lbl_story)
 
         self.story_edit = QTextEdit()
@@ -175,22 +170,18 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(self.story_edit, 1)
 
         input_layout = QHBoxLayout()
+
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("What do you do?")
-        self.input_field.setMinimumHeight(50)
-        self.input_field.setStyleSheet("font-size: 14px; padding: 5px;")
         self.input_field.returnPressed.connect(self._send_action)
         input_layout.addWidget(self.input_field)
 
         self.btn_send = QPushButton("Send")
-        self.btn_send.setMinimumHeight(50)
-        self.btn_send.setMinimumWidth(100)
         self.btn_send.clicked.connect(self._send_action)
         input_layout.addWidget(self.btn_send)
 
         right_layout.addLayout(input_layout)
-
-        main_layout.addLayout(right_layout, 6)
+        main_layout.addLayout(right_layout, 3)
 
     def _send_action(self):
         text = self.input_field.text().strip()
@@ -217,12 +208,22 @@ class MainWindow(QMainWindow):
         visual_en = data.get("visual_en", "")
         tags_en = data.get("tags_en", [])
 
-        if "La connessione neurale è instabile... (Errore API)" in text:
+        # --- SICUREZZA API: Intercettiamo l'errore prima della generazione ---
+        error_signature = "La connessione neurale è instabile... (Errore API)"
+        if error_signature in text:
+            # 1. Stampa errore nel log come SYSTEM (non come Luna)
             self._append_story(f"\n**SYSTEM**: ⚠️ {text}\n")
-            self.status_lbl.setText("API Error.")
+            self.status_lbl.setText("API Error - Connection Failed.")
+
+            # 2. Riabilita Input per permettere di riprovare
             self.input_field.setDisabled(False)
-            self.img_viewer.image_lbl.setText("Aborted.")
+            self.input_field.setPlaceholderText("Try again or check API Key...")
+            self.input_field.setFocus()
+
+            # 3. INTERROMPE l'esecuzione: niente Audio, niente Immagini
+            self.img_viewer.image_lbl.setText("Generation Aborted (API Error).")
             return
+        # ---------------------------------------------------------------------
 
         name = self.engine.state_manager.current_state["game"]["companion_name"]
         self._append_story(f"\n**{name.upper()}**: {text}\n")

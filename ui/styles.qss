@@ -1,86 +1,109 @@
 /* file: ui/styles.qss */
 
-/* Finestra Principale */
+* {
+    font-family: "Segoe UI", "Verdana", sans-serif;
+}
+
 QMainWindow {
-    background-color: #f0f0f0; /* Grigio chiaro neutro */
+    background-color: #dcdcdc;
 }
 
-/* Titoli */
-QLabel {
-    font-family: "Segoe UI", sans-serif;
-    color: #3b2410; /* Marrone scuro */
+/* --- REGOLE GENERALI BOX --- */
+QGroupBox {
+    background-color: #ffffff;
+    border: 2px solid #5d4037;
+    border-radius: 8px;
+    margin-top: 25px;
+    font-weight: bold;
+    font-size: 15px;
+    color: #3e2723;
 }
 
-/* --- BOX STATISTICHE (Stile Codice Antico) --- */
-#StatsBox {
-    background-color: #f7f2e8; /* Crema */
-    border: 1px solid #c8b49a;
-    font-family: "Consolas", monospace;
-    font-size: 14px;
-    color: #000;
+/* --- DIMENSIONI RIGIDE PER I 4 BOX --- */
+
+/* Box Superiori (Status, Memory): Più alti */
+QGroupBox#BoxTop {
+    min-height: 160px;
+    max-height: 160px; /* Li blocchiamo per evitare che si deformino */
+}
+
+/* Box Inferiori (Relationships, Inventory): 20% più piccoli */
+QGroupBox#BoxBottom {
+    min-height: 130px;
+    max-height: 130px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 3px 10px;
+    background-color: #5d4037;
+    color: #ffffff;
+    border-radius: 4px;
+}
+
+/* --- CONTENUTI INTERNI --- */
+QLabel[class="StatusText"] {
+    color: #000000;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 1px;
+    background-color: transparent;
+}
+
+QTextBrowser#MemoryBox {
+    background-color: #fffde7;
+    border: 1px solid #aaa;
+    color: #000000;
+    font-size: 12px;
+}
+
+QLabel#AffinityLabel {
+    background-color: #f5f5f5;
+    border: 1px solid #aaa;
+    color: #000000;
+    font-size: 12px;
+    font-weight: bold;
     padding: 5px;
 }
 
-/* --- LIBRO STORIA (Stile Romanzo) --- */
+QListWidget {
+    background-color: #f5f5f5;
+    border: 1px solid #aaa;
+    color: #000000;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 5px;
+}
+
 #StoryArea {
-    background-color: #fdf6e3; /* Carta antica */
-    border: 2px solid #d6c4a0;
-    border-radius: 6px;
-    color: #2b2b2b;
-    font-family: "Georgia", "Times New Roman", serif;
+    background-color: #fff8e1;
+    border: 2px solid #5d4037;
+    color: #000000;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.5;
     padding: 15px;
 }
 
-/* --- INPUT UTENTE --- */
 QLineEdit {
     background-color: #ffffff;
-    border: 2px solid #888;
-    border-radius: 8px;
-    padding: 8px;
-    font-family: "Segoe UI", sans-serif;
-    font-size: 14px;
-    color: #000;
+    border: 2px solid #5d4037;
+    border-radius: 6px;
+    color: #000000;
+    font-size: 15px;
+    padding: 6px;
 }
 
-QLineEdit:focus {
-    border: 2px solid #d6c4a0;
-}
-
-/* --- PULSANTI --- */
 QPushButton {
-    background-color: #e1d5c9;
-    border: 1px solid #b0a293;
-    border-radius: 4px;
-    padding: 6px 12px;
-    color: #3e2b1f;
+    background-color: #d7ccc8;
+    border: 2px solid #8d6e63;
+    border-radius: 5px;
+    color: #3e2723;
     font-weight: bold;
+    font-size: 14px;
+    padding: 6px;
 }
-
 QPushButton:hover {
-    background-color: #f0e6dc;
-    border-color: #8c7b6c;
-}
-
-QPushButton:pressed {
-    background-color: #d1c4b8;
-}
-
-QPushButton:disabled {
-    background-color: #e0e0e0;
-    color: #888;
-    border: 1px solid #ccc;
-}
-
-/* --- LABEL IMMAGINE --- */
-#ImageLabel {
-    background-color: #000;
-    border: 2px solid #444;
-    color: #eee;
-}
-
-/* Separatori */
-QFrame[frameShape="4"] { /* HLine */
-    color: #d6c4a0;
+    background-color: #efebe9;
+    border-color: #5d4037;
 }
