@@ -1,5 +1,5 @@
 {
-    "runpod_active": false,
-    "runpod_url": "https://tuo-id-runpod.proxy.runpod.net",
+    "runpod_active": true,
+    "runpod_url": "https://r66kflidwh6x98-7860.proxy.runpod.net/",
     "local_url": "http://127.0.0.1:7860"
 }

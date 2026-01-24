@@ -1,14 +1,14 @@
 {
   "meta": {
     "world_id": "school_life",
-    "created_at": 1769274416.2054212,
-    "turn_count": 2
+    "created_at": 1769277531.9701679,
+    "turn_count": 49
   },
   "game": {
-    "time_of_day": "Morning",
-    "location": "School Entrance Gate",
+    "time_of_day": "Afternoon",
+    "location": "Gym / Locker Room Corridor",
     "companion_name": "Luna",
-    "current_outfit": "teacher_suit",
+    "current_outfit": "gym_uniform",
     "inventory": [],
     "gold": 0,
     "hp": 20,
@@ -18,9 +18,9 @@
       "charisma": 10
     },
     "affinity": {
-      "Luna": 0,
-      "Stella": 0,
-      "Maria": 0
+      "Luna": 12,
+      "Stella": 35,
+      "Maria": 8
     },
     "quest_log": [
       "Survive the School Year."
@@ -30,9 +30,95 @@
   "history": [
     {
       "role": "model",
-      "content": "Il sole primaverile illumina il cancello della \"Da Vinci\", ma una figura imponente ti sbarra la strada. Luna ti osserva con occhi freddi, ticchettando ritmicamente una penna sul registro delle presenze. \"Sei in ritardo il primo giorno? Iniziamo davvero male, matricola.\""
+      "content": "Luna si irrigidisce appena sente la tua virilità premere contro la fessura delle sue natiche, ma invece di ritrarsi, spinge indietro il bacino con forza oscena. Friziona deliberatamente il suo sedere sodo e sudato contro la tua erezione, usando il contatto proibito per sbilanciarti fisicamente e mentalmente. \"Marcatura... molto stretta,\" ansima con voce roca e il viso in fiamme, prima di scattare verso il canestro approfittando del tuo stordimento."
+    },
+    {
+      "role": "user",
+      "content": "saltiamo assieme un suo ginocchio colpisce i miei testicoli ma con la punta delle dita riesco a deviare la palla che va in fallo laterale... mi piego sulle gambe accusando il colpo"
+    },
+    {
+      "role": "model",
+      "content": "Il dolore ti mozza il fiato e crolli sul parquet, rannicchiandoti su te stesso mentre la palla rotola via ignorata. Luna è subito sopra di te, l'agonismo cancellato da un lampo di preoccupazione mista a colpa mentre si inginocchia tra le tue gambe. \"Respiro profondo, non trattenere l'aria,\" ti ordina con voce ferma ma affannata, le sue mani che ti sostengono le spalle e il viso pericolosamente vicino al tuo, offrendoti una visuale privilegiata nella sua scollatura sudata."
+    },
+    {
+      "role": "user",
+      "content": "devo dire che è molto competitiva professoressa non c'è che dire... facciamo che sia un pareggio?"
+    },
+    {
+      "role": "model",
+      "content": "Luna lascia sfuggire un sospiro tremulo che le fa gonfiare il petto sudato proprio davanti al tuo naso, un misto di sollievo e adrenalina che scema. \"Pareggio,\" concede con un mezzo sorriso raro e quasi impercettibile, afferrandoti saldamente il braccio per tirarti su con una forza sorprendente. \"Ma non credere che la prossima volta sarò così clemente,\" ti sussurra all'orecchio mentre ti rimette in piedi, il suo profumo muschiato e femminile che ti avvolge un istante prima che la campanella di fine lezione rompa l'incantesimo."
+    },
+    {
+      "role": "user",
+      "content": "ci conto professoressa. mentre con un braccio mi appoggio al suo collo e una mano cade involontariamente sul suo seno sudato"
+    },
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile... (Errore API)"
+    },
+    {
+      "role": "user",
+      "content": "ci conto professoressa. mentre con un braccio mi appoggio al suo collo e una mano cade involontariamente sul suo seno sudato"
+    },
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile... (Errore API)"
+    },
+    {
+      "role": "user",
+      "content": "ci conto professoressa. mentre con un braccio mi appoggio al suo collo e una mano cade involontariamente sul suo seno sudato"
+    },
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile... (Errore API)"
+    },
+    {
+      "role": "user",
+      "content": "ci conto professoressa. mentre con un braccio mi appoggio al suo collo e una mano cade involontariamente sul suo seno sudato"
+    },
+    {
+      "role": "model",
+      "content": "La connessione neurale è instabile... (Errore API)"
     }
   ],
-  "summary_log": [],
-  "knowledge_base": []
+  "summary_log": [
+    "Enrico Angella si è identificato come studente della classe 1C dopo essere stato fermato in ritardo da Luna, ricevendo un ammonimento formale sul registro. Ha evitato la convocazione dal preside e si è diretto verso l'aula situata in fondo al corridoio a destra.",
+    "Enrico entra in aula e si siede accanto a una ragazza bionda all'ultimo banco, nonostante lei lo abbia accolto con palese disprezzo. Si presenta tentando un approccio basato sulle sue presunte abilità di fotografo professionista, offrendosi di aiutarla con i selfie.",
+    "Il giocatore ha impressionato Stella scattandole una foto lusinghiera, trasformando il suo scetticismo iniziale in un interesse opportunistico. L'NPC ha riconosciuto l'utilità del protagonista, modificando il proprio atteggiamento da ostile a collaborativo. La scena termina con l'inizio imminente della lezione di matematica.",
+    "Durante la lezione della Professoressa Luna, il protagonista ha osservato di nascosto le gambe dell'insegnante venendo però colto sul fatto da Stella. Per dissimulare l'interesse, il giocatore ha negato l'accusa affermando di avere occhi solo per la compagna.",
+    "Il protagonista ha accettato la sfida di Stella di ignorare la lezione per fissare solo lei, richiedendo in cambio un incentivo fisico per rendere il gioco interessante. Stella ha acconsentito esponendosi in modo provocatorio sotto il banco, costringendo il protagonista a mantenere il contatto visivo nonostante la forte eccitazione.",
+    "Angella ha deciso di mentire alla Professoressa Luna per coprire Stella, ottenendo l'approvazione silenziosa della compagna. Sfidata dall'insegnante a dimostrare la sua preparazione, Angella ha risolto correttamente e con facilità l'equazione alla lavagna.",
+    "Angella risolve correttamente il calcolo e provoca Luna con un sussurro audace, ricevendo un avvertimento imbarazzato ma nessuna punizione disciplinare. Mentre torna al posto, la protagonista nota che Stella la osserva con evidente ammirazione per l'accaduto.",
+    "Stella, colpita dall'astuzia del protagonista nel coprirla con la \"vecchia\", ha mutato il disprezzo in lussuria offrendo una ricompensa fisica. Il giocatore ha accettato le avances, sottolineando però la necessità di agire con discrezione per evitare di essere scoperti nuovamente.",
+    "Stella ha provocato fisicamente Enrico poco prima dell'inizio della pausa pranzo. Successivamente, Enrico ha deciso di rimanere in aula per osservare di nascosto i piedi scalzi di Luna, terminando l'interazione con un saluto formale alla professoressa.",
+    "Angella si è congedato dall'ufficio di una Luna visibilmente imbarazzata, decidendo di dirigersi ai servizi igienici anziché alla mensa. Una volta lì ha espletato i suoi bisogni fisiologici, imbattendosi nella bidella Maria intenta a pulire il pavimento nell'immediata vicinanza.",
+    "Il protagonista ha avuto un incontro imbarazzante con Maria mentre puliva il pavimento, ricomponendosi frettolosamente alla sua presenza. L'inserviente ha reagito con bruschezza all'intrusione, continuando il lavoro vicino al giocatore. Per farsi perdonare, il protagonista ha offerto il suo aiuto a Maria per trasportare il secchio d'acqua.",
+    "Riassunto non disponibile.",
+    "Il personaggio si è avvicinato alla donna rimuovendole uno scarpone e iniziando a massaggiarle il piede con calma. Ha offerto di alleviare il suo dolore chiedendo implicitamente il permesso di proseguire il contatto fisico.",
+    "Il personaggio si è avvicinato alla donna, rimuovendole lo scarpone e iniziando a massaggiarle il piede con calma. Ha offerto di alleviare il suo dolore ponendo una condizione verbale (\"se mi lascia\") mentre manteneva il contatto fisico.",
+    "Il PG ha rimosso lo scarpone a Maria e ha iniziato a massaggiarle il piede, offrendo di alleviare il suo dolore in cambio della propria libertà. L'interazione è sospesa in attesa della risposta di Maria a questa proposta di scambio.",
+    "Il giocatore ha ottenuto il permesso di massaggiare il piede di Maria, superando la sua iniziale riluttanza. L'interazione fisica ha generato in lei immediato sollievo e piacere, portandola a rilassare le difese nei confronti del protagonista.",
+    "Il protagonista ha portato Maria a un elevato stato di eccitazione fisica, interrompendo però l'atto bruscamente appena prima del climax. La priorità è stata data alla necessità di raggiungere la mensa prima della chiusura, lasciando l'NPC in uno stato di frustrazione sessuale irrisolta.",
+    "Il protagonista ha interrotto bruscamente l'intimità con Maria, lasciandola furiosa, per poi recarsi alla mensa affollata. Lì ha individuato un'addetta al servizio dai capelli rossi e dalle forme prorompenti. Ha approcciato la donna con una battuta a doppio senso mentre ritirava il pranzo.",
+    "Dopo aver acquistato il pranzo, il protagonista è stato esplicitamente invitato da Stella a unirsi al suo tavolo, ignorando la sua corte di ammiratori. Accettando l'invito, si è seduto con lei e ha avviato la conversazione con una battuta sui selfie.",
+    "Stella ha accolto il protagonista con interesse esclusivo, richiedendo esplicitamente inquadrature più audaci rispetto al mattino. Il giocatore ha risposto con mistero e, fingendo di raccogliere una forchetta caduta, ha sfruttato l'occasione per osservare le gambe di Stella sotto il tavolo.",
+    "Il protagonista risponde in modo evasivo a Stella riguardo alle proprie intenzioni. Chinandosi per raccogliere una forchetta caduta, osserva la postura esposta delle gambe della donna.",
+    "Stella ha provocato esplicitamente Enrico in mensa mostrandogli l'intimo, ma lui ha mantenuto la calma. Il protagonista ha quindi deciso di spostare l'interazione in giardino in attesa dell'inizio delle lezioni pomeridiane.",
+    "Enrico e Stella hanno lasciato la mensa per appartarsi nel cortile, sdraiandosi insieme sull'erba in cerca di privacy. Stella si è mostrata disponibile e fisicamente vicina, togliendosi le scarpe. Enrico ha scattato un selfie focalizzato sul corpo esposto della ragazza per immortalare il momento.",
+    "Angella ha scattato una foto a Stella tenendola per sé e reclamando una ricompensa per averla difesa dalla professoressa. L'azione ha eccitato Stella spingendola ad avances fisiche esplicite, ma l'intimità è stata interrotta dalla campanella che ha costretto entrambi a rientrare a scuola.",
+    "L'intimità con Stella è stata interrotta, lasciandola frustrata e con la promessa che Enrico dovrà sdebitarsi più tardi. In palestra, la Professoressa Luna ha preso il posto dell'indisposto Coach Rossi per dirigere la lezione. Enrico è fortemente eccitato dalla tenuta della professoressa e tenta di nascondere il suo stato.",
+    "Luna ha ordinato ai presenti di rimanere scalzi per preservare i tappetini e ha iniziato una dimostrazione di stretching. Il protagonista replica i movimenti, faticando a dissimulare la propria eccitazione fisica scaturita dall'osservazione dell'istruttrice.",
+    "Luna ha forzato Angella in una posizione di stretching estremo, imponendo la sua dominanza fisica nonostante l'evidente stato di eccitazione del personaggio. Per prolungare il contatto e sollecitare ulteriori attenzioni, Angella ha deciso di simulare un crampo alla parte alta della coscia.",
+    "Angella ha interrotto bruscamente il contatto fisico con Luna per celare l'eccitazione, ma l'istruttrice ha notato il suo stato prima di ordinargli di rientrare nei ranghi. Successivamente, Angella ha ottenuto il supporto della classe per partecipare alla partita di pallacanestro con un compagno, costringendo Luna ad accettare la richiesta.",
+    "Luna ha accettato la sfida uno contro uno a basket; Angella ha segnato il primo punto dopo un contatto involontario. Luna ora attacca aggressivamente di schiena, premendo il corpo contro Angella che, in evidente stato di eccitazione, mantiene una marcatura stretta."
+  ],
+  "knowledge_base": [
+    "Player's name is Enrico Angella, student of Class 1C.",
+    "Player claims to be a professional photographer.",
+    "Player is aggressively flirting with Stella.",
+    "Player is competent at mathematics.",
+    "Player is sexually bold with authority figures.",
+    "Stella is aroused by intelligence and boldness.",
+    "Player uses dirty puns to flirt with cafeteria staff."
+  ]
 }

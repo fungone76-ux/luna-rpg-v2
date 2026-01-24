@@ -96,13 +96,21 @@ class GameEngine:
                 f"IMPORTANT: First write the short Narration in Italian, THEN provide the JSON."
             )
 
-        # 3. Generazione Risposta (Passiamo memory_context)
-        response_data = self.llm.generate_response(
-            user_input=final_input,
-            system_instruction=system_prompt,
-            history=history,
-            memory_context=memory_block  # <--- INIEZIONE MEMORIA QUI
-        )
+            # 3. Generazione Risposta
+            response_data = self.llm.generate_response(
+                user_input=final_input,
+                system_instruction=system_prompt,
+                history=history,
+                memory_context=memory_block
+            )
+
+            # --- AGGIUNTA FILTRO SICUREZZA ---
+            # Se la risposta è un errore API, non salviamo questo turno nella storia
+            error_msg = "La connessione neurale è instabile... (Errore API)"
+            if error_msg in response_data["text"]:
+                print("⚠️ Errore API rilevato: Turno non salvato per preservare la cronologia.")
+                return response_data
+                # ---------------------------------
 
         # 4. Gestione Aggiornamenti (Updates)
         if "updates" in response_data:

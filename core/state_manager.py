@@ -72,25 +72,30 @@ class StateManager:
             print(f"❌ Save Error: {e}")
             return ""
 
+    # In core/state_manager.py
+
     def load_game(self, filename: str) -> bool:
+        # Definiamo il percorso completo unendo la cartella saves al nome file
+        import os
         full_path = self.saves_path / filename
-        if not full_path.exists(): return False
+
+        if not full_path.exists():
+            print(f"❌ File non trovato: {full_path}")
+            return False
+
         try:
             with open(full_path, "r", encoding="utf-8") as f:
                 self.current_state = json.load(f)
 
-            # Retrocompatibilità
-            if "time_of_day" not in self.current_state["game"]:
-                self.current_state["game"]["time_of_day"] = "Morning"
-            if "stats" not in self.current_state["game"]:
-                self.current_state["game"]["stats"] = {"strength": 10, "mind": 10, "charisma": 10}
-            # Assicuriamoci che summary_log esista
-            if "summary_log" not in self.current_state:
-                self.current_state["summary_log"] = []
+            # Pulizia di sicurezza dopo il caricamento
+            if "game" not in self.current_state:
+                print("❌ Errore: Dati 'game' mancanti nel file!")
+                return False
 
+            print(f"✅ Caricamento riuscito: {self.current_state['game']['location']}")
             return True
         except Exception as e:
-            print(f"❌ Load Error: {e}")
+            print(f"❌ Errore critico nel caricamento: {e}")
             return False
 
     def update_state(self, updates: Dict):
