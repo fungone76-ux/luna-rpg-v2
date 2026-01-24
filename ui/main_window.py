@@ -11,7 +11,6 @@ from core.engine import GameEngine
 from config.settings import Settings
 from ui.components.startup_dialog import StartupDialog
 from ui.components.image_viewer import InteractiveImageViewer
-# --- IMPORTIAMO IL NUOVO PANNELLO ---
 from ui.components.status_panel import StatusPanel
 
 
@@ -108,13 +107,8 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout()
         left_layout.setSpacing(10)
 
-        # --- MODIFICA CRUCIALE: RIMOSSO IL VECCHIO TEXTEDIT ---
-        # self.stats_edit = QTextEdit() ... (CANCELLATO)
-
-        # --- INSERITO IL NUOVO STATUS PANEL ---
         self.status_panel = StatusPanel()
         left_layout.addWidget(self.status_panel)
-        # ------------------------------------------------------
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
@@ -214,10 +208,26 @@ class MainWindow(QMainWindow):
         visual_en = data.get("visual_en", "")
         tags_en = data.get("tags_en", [])
 
+        # --- SICUREZZA API: Intercettiamo l'errore prima della generazione ---
+        error_signature = "La connessione neurale è instabile... (Errore API)"
+        if error_signature in text:
+            # 1. Stampa errore nel log come SYSTEM (non come Luna)
+            self._append_story(f"\n**SYSTEM**: ⚠️ {text}\n")
+            self.status_lbl.setText("API Error - Connection Failed.")
+
+            # 2. Riabilita Input per permettere di riprovare
+            self.input_field.setDisabled(False)
+            self.input_field.setPlaceholderText("Try again or check API Key...")
+            self.input_field.setFocus()
+
+            # 3. INTERROMPE l'esecuzione: niente Audio, niente Immagini
+            self.img_viewer.image_lbl.setText("Generation Aborted (API Error).")
+            return
+        # ---------------------------------------------------------------------
+
         name = self.engine.state_manager.current_state["game"]["companion_name"]
         self._append_story(f"\n**{name.upper()}**: {text}\n")
 
-        # AGGIORNAMENTO STATS SUL NUOVO PANNELLO
         self._update_stats()
 
         self.input_field.setDisabled(False)
@@ -265,7 +275,6 @@ class MainWindow(QMainWindow):
             self._update_nav_buttons()
 
     def _update_stats(self):
-        # NUOVA LOGICA: Passiamo lo stato intero al StatusPanel
         state = self.engine.state_manager.current_state
         self.status_panel.update_status(state)
 

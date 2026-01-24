@@ -75,29 +75,40 @@ def build_image_prompt(
         game_state: Dict,
         world_data: Dict
 ) -> Tuple[str, str]:
-    # 1. Identifica il personaggio (Modalità Singola)
+    # 1. Identifica i personaggi presenti
     full_text = (visual_en + " " + " ".join(tags_en)).lower()
+    found_chars = []
 
-    # Default: usa la compagna attiva
-    char_name = game_state.get("companion_name", "Luna")
-
-    # Se c'è un riferimento esplicito nel testo a un altro personaggio base, usa quello (priorità al testo)
-    # Esempio: se nel testo c'è "Stella", generiamo Stella anche se la compagna è Luna.
     for name in BASE_PROMPTS.keys():
         if name.lower() in full_text:
-            char_name = name
-            break
+            found_chars.append(name)
 
-            # 2. Costruzione Prompt
+    # Se vuoto, usa la compagna attiva
+    if not found_chars:
+        found_chars.append(game_state.get("companion_name", "Luna"))
+
+    found_chars = list(dict.fromkeys(found_chars))
+    is_group = len(found_chars) >= 2
+
+    # 2. Costruzione Prompt
     prompt_parts = []
 
-    # A. Base Prompt (Dal Dizionario Hardcoded)
-    base = BASE_PROMPTS.get(char_name, NPC_BASE)
+    if is_group:
+        prompt_parts.append(f"{len(found_chars)}girls")
 
-    # B. Outfit (Iniettato dallo Stato)
-    outfit_str = _get_outfit_string(char_name, game_state, world_data)
+    for char_name in found_chars:
+        # A. Base Prompt (Dal Dizionario Hardcoded)
+        base = BASE_PROMPTS.get(char_name, NPC_BASE)
+        if is_group:
+            base = base.replace("1girl,", "").replace("1girl", "").strip()
 
-    prompt_parts.append(f"{base}, {outfit_str}")
+        # B. Outfit (Iniettato dallo Stato)
+        outfit_str = _get_outfit_string(char_name, game_state, world_data)
+
+        prompt_parts.append(f"{base}, {outfit_str}")
+
+        if is_group:
+            prompt_parts.append("BREAK")
 
     # 3. Scena & Tags (Dall'LLM)
     # Rimuoviamo tag di qualità doppi se l'LLM li ha messi
@@ -116,10 +127,13 @@ def build_image_prompt(
         prompt_parts.append(f"background is {loc}")
 
     # Assemblaggio
-    full_prompt_str = ", ".join([p.strip().strip(",") for p in prompt_parts if p])
+    separator = " " if is_group else ", "
+    full_prompt_str = separator.join([p.strip().strip(",") for p in prompt_parts if p])
 
-    # Negative Prompt standard (Senza logica gruppo)
+    # Negative Prompt (con protezione anti-clone per gruppi)
     final_negative = NEGATIVE_PROMPT
+    if is_group:
+        final_negative += ", (same face:1.4), (twins:1.4), (clones:1.4), (same hair color:1.2)"
 
     return _finalize_prompt(full_prompt_str, final_negative, tags_en, visual_en, full_text)
 

@@ -1,8 +1,8 @@
 # file: media/audio_client.py
 import os
-import io
-import pygame
 import time
+import tempfile
+import pygame
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
@@ -20,7 +20,7 @@ class AudioClient:
         self.enabled = False
         self.client = None
 
-        # 1. Carica Credenziali (File JSON obbligatorio per l'autenticazione)
+        # 1. Carica Credenziali
         cred_path = "google_credentials.json"
 
         if os.path.exists(cred_path):
@@ -28,21 +28,22 @@ class AudioClient:
                 credentials = service_account.Credentials.from_service_account_file(cred_path)
                 self.client = texttospeech.TextToSpeechClient(credentials=credentials)
 
-                # Init Pygame Mixer
-                pygame.mixer.init()
+                # Init Pygame Mixer con configurazione sicura
+                # Buffer più alto riduce il rischio di crash
+                pygame.mixer.init(frequency=24000, buffer=4096)
                 self.enabled = True
-                print("✅ Audio Client: Google TTS Connesso (Modalità RAM).")
+                print("✅ Audio Client: Google TTS Connesso (Modalità File Temp).")
             except Exception as e:
                 print(f"⚠️ Errore Audio: Impossibile caricare credenziali ({e})")
         else:
             print(f"⚠️ Audio Disabilitato: Manca '{cred_path}' nella cartella.")
 
     def play_voice(self, text: str, character_name: str = "Narrator"):
-        """Genera audio, lo riproduce dalla RAM e lo scarta."""
+        """Genera audio, lo salva su temp e lo riproduce."""
         if not self.enabled or not text:
             return
 
-        # 1. Configura la richiesta
+        # Configura la richiesta
         synthesis_input = texttospeech.SynthesisInput(text=text)
 
         voice_config = VOICE_MAP.get(character_name, VOICE_MAP["Narrator"])
@@ -54,39 +55,47 @@ class AudioClient:
 
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.0,
-            pitch=0.0
+            speaking_rate=1.0
         )
 
         try:
-            # 2. Chiama Google (Scarica i byte audio)
+            # Chiama Google
             response = self.client.synthesize_speech(
                 input=synthesis_input, voice=voice, audio_config=audio_config
             )
 
-            # 3. Stream dalla RAM (Nessun salvataggio su disco)
-            # Creiamo un file 'virtuale' in memoria
-            audio_stream = io.BytesIO(response.audio_content)
+            # SALVATAGGIO SICURO SU FILE TEMPORANEO
+            # Pygame è molto più stabile leggendo da disco che da RAM
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                temp_filename = fp.name
+                fp.write(response.audio_content)
 
-            self._play_stream(audio_stream)
+            self._play_file(temp_filename)
 
         except Exception as e:
             print(f"❌ Errore Google TTS: {e}")
 
-    def _play_stream(self, audio_stream):
-        """Riproduce direttamente dall'oggetto in memoria."""
+    def _play_file(self, filename):
+        """Riproduce da file e poi pulisce."""
         try:
-            pygame.mixer.music.load(audio_stream)
+            pygame.mixer.music.load(filename)
             pygame.mixer.music.play()
 
-            # Blocca il flusso finché non finisce di parlare
+            # Loop di attesa (Thread Safe)
             while pygame.mixer.music.get_busy():
                 time.sleep(0.1)
 
             pygame.mixer.music.unload()
 
         except Exception as e:
-            print(f"❌ Errore Playback RAM: {e}")
+            print(f"❌ Errore Playback: {e}")
+        finally:
+            # Pulizia file temporaneo
+            try:
+                if os.path.exists(filename):
+                    os.remove(filename)
+            except:
+                pass
 
     def stop_all(self):
         if self.enabled:

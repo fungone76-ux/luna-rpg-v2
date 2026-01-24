@@ -1,3 +1,4 @@
+# file: worlds/school_life.yaml
 meta:
   id: "school_life"
   name: "High School Harem"
@@ -40,6 +41,34 @@ meta:
 # Visual Style: Lasciato vuoto o minimo perché gestito interamente da prompt_builder.py
 visual_style:
   loras: [] # Aggiungi qui eventuali LoRA ambientali globali se servono
+
+# --- NUOVA SEZIONE NPC LOGIC ---
+npc_logic:
+  # Parole chiave per identificare NPC Femminili
+  # Se il testo contiene "nurse" ma non "Luna", genererà un NPC Infermiera.
+  female_hints:
+    - "nurse"
+    - "librarian"
+    - "cheerleader"
+    - "student girl"
+    - "classmate girl"
+    - "principal woman"
+    - "lunch lady"
+    - "mother"
+    - "milf"
+    - "teacher lady"
+
+  # Parole chiave per identificare NPC Maschili
+  male_hints:
+    - "coach"
+    - "janitor"      # (Se Maria non è nominata esplicitamente)
+    - "principal man"
+    - "student boy"
+    - "classmate boy"
+    - "bully"
+    - "nerd"
+    - "father"
+    - "security guard"
 
 companions:
   Luna:

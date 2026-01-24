@@ -6,7 +6,10 @@ from typing import Dict, List
 
 from core.world_loader import WorldLoader
 from core.state_manager import StateManager
-from core.prompt_builder import build_image_prompt
+
+# --- MODIFICA: Sostituito il vecchio builder con il Dispatcher ---
+from core.prompt_dispatcher import PromptDispatcher
+
 from media.llm_client import LLMClient
 from media.image_client import ImageClient
 from media.audio_client import AudioClient
@@ -102,14 +105,28 @@ class GameEngine:
         self.state_manager.save_game("autosave.json")
         return response_data
 
-    # --- EYES ---
+    # --- EYES (AGGIORNATO) ---
     def process_image_generation(self, visual_en: str, tags_en: List[str]) -> str:
-        game_state = self.state_manager.current_state.get("game", {})
-        # Chiama il builder corretto che replica il vecchio metodo
-        pos, neg = build_image_prompt(visual_en, tags_en, game_state, self.world_data)
+        # Recuperiamo l'ultimo testo narrativo dalla storia
+        # Questo serve al Dispatcher per capire chi è presente nella scena (analisi semantica)
+        history = self.state_manager.current_state.get("history", [])
+        last_narrative = ""
+        if history and history[-1]["role"] == "model":
+            last_narrative = history[-1]["content"]
 
-        # Debug: Stampa il prompt finale per vedere se "wearing clothing" è sparito
+        # --- CHIAMATA AL DISPATCHER ---
+        # Analizza testo + visual + tags e decide se chiamare Single, Multi o NPC builder
+        pos, neg = PromptDispatcher.dispatch(
+            text_response=last_narrative,
+            visual_en=visual_en,
+            tags_en=tags_en,
+            game_state=self.state_manager.current_state,  # Passiamo tutto lo stato per massima flessibilità
+            world_data=self.world_data
+        )
+
+        # Debug: Stampa il prompt finale
         print(f"\n🎨 [SD PROMPT FINAL]: {pos[:200]}...")
+
         return self.imager.generate_image(pos, neg)
 
     # --- VOICE ---
