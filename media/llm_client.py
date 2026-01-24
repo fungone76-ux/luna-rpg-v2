@@ -5,37 +5,33 @@ import re
 from typing import List, Dict, Any
 
 # --- LIBRERIE NECESSARIE ---
-# 1. pip install google-genai
-# 2. pip install python-dotenv
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
 # --- CARICAMENTO .ENV ---
-# Questo comando cerca il file .env e carica le variabili
 load_dotenv()
 
-# Configurazione di emergenza (lascia vuoto se usi .env)
+# Configurazione di emergenza
 HARDCODED_KEY = "INCOLLA_QUI_SOLO_SE_ENV_NON_VA"
 
 
 class LLMClient:
     def __init__(self):
-        # 1. Recupera la chiave (Ora load_dotenv() ha caricato il file .env)
+        # 1. Recupera la chiave
         self.api_key = os.getenv("GEMINI_API_KEY")
 
-        # Fallback se .env fallisce
         if not self.api_key:
             if "INCOLLA_QUI" not in HARDCODED_KEY:
                 self.api_key = HARDCODED_KEY
                 print("⚠️ .env non letto correttamente: Utilizzo chiave hardcoded.")
             else:
-                print("❌ ERRORE CRITICO: GEMINI_API_KEY non trovata (né in .env né nel codice).")
+                print("❌ ERRORE CRITICO: GEMINI_API_KEY non trovata.")
                 self.client = None
                 self.model_id = None
                 return
 
-        # 2. Inizializzazione Client V2
+        # 2. Inizializzazione Client
         try:
             self.client = genai.Client(api_key=self.api_key)
         except Exception as e:
@@ -45,18 +41,17 @@ class LLMClient:
 
         self.model_id = None
 
-        # LISTA MODELLI (Priorità alla stabilità)
+        # LISTA MODELLI (Priorità: Potenza -> Velocità)
         candidates = [
-            "gemini-3-pro-preview",
+            "gemini-2.0-flash-exp",  # Se hai accesso alla 2.0 Flash
             "gemini-1.5-pro",
             "gemini-1.5-flash"
         ]
 
-        print("🤖 [LLM Init] Connessione a Gemini (SDK Google GenAI V2)...")
+        print("🤖 [LLM Init] Connessione a Gemini...")
 
         for model_name in candidates:
             try:
-                # Test di connessione leggero
                 self.client.models.generate_content(
                     model=model_name,
                     contents="Test connection"
@@ -65,32 +60,35 @@ class LLMClient:
                 print(f"✅ Modello LLM attivato: {model_name}")
                 break
             except Exception as e:
-                # print(f"   (Skip {model_name}: {e})") # Decommenta per debug
                 pass
 
         if not self.model_id:
-            print("❌ ERRORE: Nessun modello Gemini funzionante trovato o Chiave non valida.")
+            print("❌ ERRORE: Nessun modello Gemini funzionante trovato.")
 
     def generate_response(
             self,
             user_input: str,
             system_instruction: str,
             history: List[Dict],
-            summaries: List[str]
+            memory_context: str = ""  # <--- NUOVO PARAMETRO per la Memoria
     ) -> Dict[str, Any]:
         """Invia il contesto a Gemini e parsa la risposta."""
         if not self.client or not self.model_id:
             return {"text": "Errore: Nessun modello AI connesso.", "visual_en": "", "tags_en": []}
 
-        # 3. Costruzione Contenuti
         contents = []
 
-        # A. Inseriamo i riassunti
-        if summaries:
-            summary_text = "RIASSUNTO EVENTI PASSATI:\n" + "\n".join(f"- {s}" for s in summaries)
-            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=summary_text)]))
-            contents.append(
-                types.Content(role="model", parts=[types.Part.from_text(text="Ricevuto.")]))
+        # A. Iniezione Memoria (Fatti + Riassunti precedenti)
+        if memory_context:
+            # Lo passiamo come un messaggio "di sistema" simulato o user pre-prompt
+            contents.append(types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=f"SYSTEM MEMORY LOG:\n{memory_context}")]
+            ))
+            contents.append(types.Content(
+                role="model",
+                parts=[types.Part.from_text(text="Memory loaded.")]
+            ))
 
         # B. Storia Recente
         for msg in history:
@@ -100,7 +98,7 @@ class LLMClient:
         # C. Input Attuale
         contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_input)]))
 
-        # 4. Configurazione
+        # Configurazione
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.9,
@@ -110,7 +108,6 @@ class LLMClient:
             response_mime_type="text/plain"
         )
 
-        # 5. Chiamata API
         try:
             response = self.client.models.generate_content(
                 model=self.model_id,
@@ -133,17 +130,42 @@ class LLMClient:
             }
 
     def summarize_history(self, messages: List[Dict]) -> str:
+        """
+        Crea un riassunto intelligente rimuovendo i JSON tecnici.
+        """
         if not self.client: return "Dati persi."
-        prompt_text = "Riassumi in 2 frasi concise:\n"
+
+        txt_block = ""
         for m in messages:
-            prompt_text += f"{m['role']}: {m['content']}\n"
+            role = "Player" if m['role'] == 'user' else "Game Master"
+            content = m['content']
+
+            # PULIZIA: Rimuoviamo i blocchi JSON dalle risposte dell'AI
+            # (Non serve riassumere i dati tecnici, solo la storia)
+            if role == "Game Master":
+                content = re.sub(r'```json.*?```', '', content, flags=re.DOTALL).strip()
+
+            txt_block += f"{role}: {content}\n"
+
+        # Prompt specifico per la compressione
+        prompt = (
+            "Act as a Game Master's Scribe. Compress the following RPG session logs into a concise memory entry.\n"
+            "RULES:\n"
+            "1. Keep it under 3 sentences.\n"
+            "2. Retain ONLY: Key decisions, new facts learned, and important status changes.\n"
+            "3. Discard: Small talk, visual descriptions, and technical JSON data.\n"
+            "4. Language: Italian.\n\n"
+            f"LOGS TO COMPRESS:\n{txt_block}"
+        )
+
         try:
             response = self.client.models.generate_content(
                 model=self.model_id,
-                contents=prompt_text
+                contents=prompt
             )
             return response.text.strip()
-        except:
+        except Exception as e:
+            print(f"Summary Error: {e}")
             return "Riassunto non disponibile."
 
     def _parse_output(self, raw_text: str) -> Dict[str, Any]:

@@ -38,7 +38,8 @@ Current Location: {location}
 ### 🎬 VISUAL DIRECTOR (STRICT RULES)
 **1. "visual_en"**
    - **Purpose:** Concise 1-2 sentence description for Image Gen.
-   - **Focus:** Body position and action. NO CLOTHES DESCRIPTION (Automatic).
+   - **Focus:** Body position and action.
+   - **NO CLOTHES DESCRIPTION** (Automatic).
    - **Multi-Char:** Write names explicitly ("Luna", "Stella").
    - **Constraint:** NO expressions/glasses/hats in this field.
 
@@ -54,9 +55,11 @@ Current Location: {location}
 1. **NARRATION**: Italian story text (Short).
 2. **JSON**: Technical data.
 
+**SPECIAL JSON FIELDS:**
+- **new_fact**: (Optional) String. Write ONLY if the player reveals a permanent fact (e.g., "Player hates spiders", "Player is a doctor").
+
 Example (Player was rude to Luna):
 Luna stringe gli occhi irritata. "Non usare quel tono con me."
-
 ```json
 {{
    "visual_en": "Cinematic shot of Luna looking angry, crossing arms, hallway background",
@@ -65,6 +68,7 @@ Luna stringe gli occhi irritata. "Non usare quel tono con me."
        "time_of_day": "Morning",
        "location": "Classroom",
        "affinity_change": {{ "{char_name}": -2 }},
-       "current_outfit": "..."
+       "current_outfit": "...",
+       "new_fact": "Player has a rebellious attitude toward teachers."
    }}
 }}

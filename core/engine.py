@@ -1,21 +1,18 @@
 # file: core/engine.py
-import time
 import os
 import json
 from typing import Dict, List
 
 from core.world_loader import WorldLoader
 from core.state_manager import StateManager
-
-# --- MODIFICA: Sostituito il vecchio builder con il Dispatcher ---
+# --- MODIFICA: Importiamo il nuovo Memory Manager ---
+from core.memory_manager import MemoryManager
+# --- MODIFICA: Dispatcher per le immagini (Già presente) ---
 from core.prompt_dispatcher import PromptDispatcher
 
 from media.llm_client import LLMClient
 from media.image_client import ImageClient
 from media.audio_client import AudioClient
-
-MEMORY_LIMIT = 12
-MEMORY_PRUNE_COUNT = 4
 
 
 class GameEngine:
@@ -25,6 +22,11 @@ class GameEngine:
         self.llm = LLMClient()
         self.imager = ImageClient()
         self.audio = AudioClient()
+
+        # --- MEMORY: Inizializziamo il Brain Manager ---
+        # Passiamo state_manager (per leggere/scrivere storia) e llm (per riassumere)
+        self.memory = MemoryManager(self.state_manager, self.llm)
+
         self.world_data = {}
         self.session_active = False
 
@@ -46,6 +48,10 @@ class GameEngine:
         if "summary_log" not in self.state_manager.current_state:
             self.state_manager.current_state["summary_log"] = []
 
+        # Assicuriamoci che esista anche la knowledge base per i fatti
+        if "knowledge_base" not in self.state_manager.current_state:
+            self.state_manager.current_state["knowledge_base"] = []
+
         return True
 
     def load_game(self, filename: str):
@@ -56,77 +62,84 @@ class GameEngine:
             return True
         return False
 
-    # --- BRAIN ---
+    # --- BRAIN (AGGIORNATO CON MEMORY MANAGER) ---
     def process_turn_llm(self, user_input: str, is_intro: bool = False) -> Dict:
         if not self.session_active:
             return {"text": "Error: No session.", "visual_en": "", "tags_en": []}
 
         state = self.state_manager.current_state
-        if not is_intro:
-            self._manage_long_term_memory()
 
-        # Carica il Prompt dal file esterno
+        # 1. Gestione Memoria Automatica (Drift & Pruning)
+        # Deleghiamo al manager la pulizia della storia vecchia
+        if not is_intro:
+            self.memory.manage_memory_drift()
+
+        # 2. Costruzione Context (System Prompt + Memory Block)
         system_prompt = self._build_system_prompt()
         history = state.get("history", [])
-        summaries = state.get("summary_log", [])
+
+        # Otteniamo il blocco memoria formattato (Fatti Permanenti + Riassunti Episodici)
+        memory_block = self.memory.get_context_block()
 
         final_input = user_input
 
-        # --- FIX INTRODUZIONE VELOCE ---
+        # Intro Speciale (Veloce)
         if is_intro:
             companion_name = state["game"].get("companion_name", "Unknown")
             world_name = self.world_data.get("meta", {}).get("name", "Unknown World")
 
-            # Costruiamo un contesto minimale e veloce
             final_input = (
                 f"[SYSTEM INSTRUCTION]: START THE GAME NOW.\n"
                 f"LANGUAGE: ITALIAN.\n"
                 f"CONTEXT: You are in {world_name}. The protagonist meets {companion_name}.\n"
-                f"ACTION: Start with a SHORT, IMMEDIATE hook (Max 3 lines). No long descriptions.\n"  # <--- VINCOLO QUI
+                f"ACTION: Start with a SHORT, IMMEDIATE hook (Max 3 lines). No long descriptions.\n"
                 f"IMPORTANT: First write the short Narration in Italian, THEN provide the JSON."
             )
 
+        # 3. Generazione Risposta (Passiamo memory_context)
         response_data = self.llm.generate_response(
             user_input=final_input,
             system_instruction=system_prompt,
             history=history,
-            summaries=summaries
+            memory_context=memory_block  # <--- INIEZIONE MEMORIA QUI
         )
 
+        # 4. Gestione Aggiornamenti (Updates)
         if "updates" in response_data:
-            self.state_manager.update_state(response_data["updates"])
+            updates = response_data["updates"]
+            self.state_manager.update_state(updates)
+
+            # 5. CATTURA FATTI (Nuova feature)
+            # Se l'LLM ha deciso che c'è un fatto importante, lo salviamo permanentemente
+            if "new_fact" in updates and updates["new_fact"]:
+                self.memory.add_fact(updates["new_fact"])
 
         if not is_intro:
             state["history"].append({"role": "user", "content": final_input})
 
-        # Salva la risposta testuale nella storia
         state["history"].append({"role": "model", "content": response_data["text"]})
 
         self.state_manager.save_game("autosave.json")
         return response_data
 
-    # --- EYES (AGGIORNATO) ---
+    # --- EYES (CON DISPATCHER) ---
     def process_image_generation(self, visual_en: str, tags_en: List[str]) -> str:
         # Recuperiamo l'ultimo testo narrativo dalla storia
-        # Questo serve al Dispatcher per capire chi è presente nella scena (analisi semantica)
         history = self.state_manager.current_state.get("history", [])
         last_narrative = ""
         if history and history[-1]["role"] == "model":
             last_narrative = history[-1]["content"]
 
-        # --- CHIAMATA AL DISPATCHER ---
-        # Analizza testo + visual + tags e decide se chiamare Single, Multi o NPC builder
+        # Chiamata al Dispatcher (Single / Multi / NPC)
         pos, neg = PromptDispatcher.dispatch(
             text_response=last_narrative,
             visual_en=visual_en,
             tags_en=tags_en,
-            game_state=self.state_manager.current_state,  # Passiamo tutto lo stato per massima flessibilità
+            game_state=self.state_manager.current_state,
             world_data=self.world_data
         )
 
-        # Debug: Stampa il prompt finale
         print(f"\n🎨 [SD PROMPT FINAL]: {pos[:200]}...")
-
         return self.imager.generate_image(pos, neg)
 
     # --- VOICE ---
@@ -136,15 +149,7 @@ class GameEngine:
         self.audio.play_voice(text, name)
 
     # --- HELPERS ---
-    def _manage_long_term_memory(self):
-        history = self.state_manager.current_state.get("history", [])
-        if len(history) > MEMORY_LIMIT:
-            print(f"🧠 Compressing Memory...")
-            to_prune = history[:MEMORY_PRUNE_COUNT]
-            remaining = history[MEMORY_PRUNE_COUNT:]
-            summary = self.llm.summarize_history(to_prune)
-            self.state_manager.current_state["summary_log"].append(summary)
-            self.state_manager.current_state["history"] = remaining
+    # Nota: _manage_long_term_memory è stato rimosso perché sostituito da memory_manager
 
     def _get_affinity_personality(self, char_name: str, current_points: int) -> str:
         companions_db = self.world_data.get("companions", {})
