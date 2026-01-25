@@ -131,31 +131,34 @@ class LLMClient:
 
     def summarize_history(self, messages: List[Dict]) -> str:
         """
-        Crea un riassunto intelligente rimuovendo i JSON tecnici.
+        Crea un riassunto ESTREMAMENTE CONCISO focalizzato solo sugli eventi chiave.
         """
         if not self.client: return "Dati persi."
 
+        # 1. Preparazione del testo pulito (senza JSON)
         txt_block = ""
         for m in messages:
             role = "Player" if m['role'] == 'user' else "Game Master"
             content = m['content']
 
-            # PULIZIA: Rimuoviamo i blocchi JSON dalle risposte dell'AI
-            # (Non serve riassumere i dati tecnici, solo la storia)
+            # Rimuoviamo i blocchi JSON tecnici per non confondere l'AI
             if role == "Game Master":
                 content = re.sub(r'```json.*?```', '', content, flags=re.DOTALL).strip()
 
-            txt_block += f"{role}: {content}\n"
+            # Saltiamo i messaggi vuoti
+            if content:
+                txt_block += f"{role}: {content}\n"
 
-        # Prompt specifico per la compressione
+        # 2. IL NUOVO PROMPT "CHIRURGICO"
         prompt = (
-            "Act as a Game Master's Scribe. Compress the following RPG session logs into a concise memory entry.\n"
-            "RULES:\n"
-            "1. Keep it under 3 sentences.\n"
-            "2. Retain ONLY: Key decisions, new facts learned, and important status changes.\n"
-            "3. Discard: Small talk, visual descriptions, and technical JSON data.\n"
-            "4. Language: Italian.\n\n"
-            f"LOGS TO COMPRESS:\n{txt_block}"
+            "Analizza il seguente log di gioco di ruolo (RPG) e crea una voce di memoria sintetica.\n"
+            "REGOLA D'ORO: Sii telegrafico. Ignora descrizioni erotiche, dialoghi riempitivi o dettagli visivi.\n"
+            "ISTRUZIONI:\n"
+            "1. Estrai SOLO: Decisioni chiave, nuovi luoghi visitati, fatti importanti appresi, NPC incontrati.\n"
+            "2. Scrivi in ITALIANO, terza persona, massimo 3 frasi.\n"
+            "3. Esempio Buono: 'Il giocatore ha incontrato Luna in biblioteca e ha trovato la chiave rossa.'\n"
+            "4. Esempio Vietato: 'Luna indossava un vestito rosso e ha sorriso dolcemente mentre il sole tramontava...'\n\n"
+            f"LOG DA RIASSUMERE:\n{txt_block}"
         )
 
         try:
