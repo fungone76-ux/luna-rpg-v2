@@ -64,21 +64,26 @@ class GameEngine:
 
     # --- BRAIN (AGGIORNATO CON MEMORY MANAGER) ---
     def process_turn_llm(self, user_input: str, is_intro: bool = False) -> Dict:
+        """
+        Gestisce il turno di gioco: invia l'input a Gemini, riceve la risposta,
+        aggiorna lo stato e la memoria, e salva la partita.
+        """
         if not self.session_active:
             return {"text": "Error: No session.", "visual_en": "", "tags_en": []}
 
         state = self.state_manager.current_state
 
         # 1. Gestione Memoria Automatica (Drift & Pruning)
-        # Deleghiamo al manager la pulizia della storia vecchia
+        # Protezione: se la memoria fallisce, non blocchiamo l'intero turno
         if not is_intro:
-            self.memory.manage_memory_drift()
+            try:
+                self.memory.manage_memory_drift()
+            except Exception as e:
+                print(f"⚠️ Errore Memory Manager: {e}")
 
         # 2. Costruzione Context (System Prompt + Memory Block)
         system_prompt = self._build_system_prompt()
         history = state.get("history", [])
-
-        # Otteniamo il blocco memoria formattato (Fatti Permanenti + Riassunti Episodici)
         memory_block = self.memory.get_context_block()
 
         final_input = user_input
@@ -96,38 +101,43 @@ class GameEngine:
                 f"IMPORTANT: First write the short Narration in Italian, THEN provide the JSON."
             )
 
-            # 3. Generazione Risposta
+        # 3. Generazione Risposta (Passiamo memory_context)
+        try:
             response_data = self.llm.generate_response(
                 user_input=final_input,
                 system_instruction=system_prompt,
                 history=history,
                 memory_context=memory_block
             )
+        except Exception as e:
+            print(f"❌ Errore critico LLM: {e}")
+            return {"text": "La connessione neurale è instabile... (Errore Tecnico).", "visual_en": "", "tags_en": []}
 
-            # --- AGGIUNTA FILTRO SICUREZZA ---
-            # Se la risposta è un errore API, non salviamo questo turno nella storia
-            error_msg = "La connessione neurale è instabile... (Errore API)"
-            if error_msg in response_data["text"]:
-                print("⚠️ Errore API rilevato: Turno non salvato per preservare la cronologia.")
-                return response_data
-                # ---------------------------------
+        # --- FILTRO SICUREZZA ANTI-RESET ---
+        # Se Gemini risponde vuoto o con errore, usciamo subito senza salvare
+        if not response_data or "Errore API" in response_data.get("text", ""):
+            print("⚠️ Turno annullato per preservare la storia (Risposta vuota o Errore API).")
+            return response_data if response_data else {"text": "Risposta vuota dall'IA. Riprova.", "visual_en": "",
+                                                        "tags_en": []}
 
         # 4. Gestione Aggiornamenti (Updates)
         if "updates" in response_data:
             updates = response_data["updates"]
             self.state_manager.update_state(updates)
 
-            # 5. CATTURA FATTI (Nuova feature)
-            # Se l'LLM ha deciso che c'è un fatto importante, lo salviamo permanentemente
+            # 5. CATTURA FATTI
             if "new_fact" in updates and updates["new_fact"]:
                 self.memory.add_fact(updates["new_fact"])
 
+        # 6. Aggiornamento Cronologia
         if not is_intro:
             state["history"].append({"role": "user", "content": final_input})
 
         state["history"].append({"role": "model", "content": response_data["text"]})
 
+        # 7. Salvataggio Automatico (Solo se il turno è andato a buon fine)
         self.state_manager.save_game("autosave.json")
+
         return response_data
 
     # --- EYES (CON DISPATCHER) ---

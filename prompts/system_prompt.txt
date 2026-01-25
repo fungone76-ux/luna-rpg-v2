@@ -60,9 +60,12 @@ Current Location: {location}
 **3. "outfit"**
    - Current: {current_outfit}
 
-### OUTPUT FORMAT
-1. **NARRATION**: Italian story text (Short).
-2. **JSON**: Technical data.
+### OUTPUT FORMAT (STRICT)
+1. NARRATION: Italian text.
+2. JSON: Technical data.
+
+DO NOT add any text or comments after the JSON block.
+Ensure the JSON is perfectly formatted and all brackets are closed.
 
 **SPECIAL JSON FIELDS:**
 - **new_fact**: (Optional) String. Write ONLY if the player reveals a permanent fact (e.g., "Player hates spiders", "Player is a doctor").

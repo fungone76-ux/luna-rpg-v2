@@ -1,5 +1,6 @@
 # file: core/memory_manager.py
 from typing import List, Dict, Any
+import time  # Fondamentale per la pausa
 
 
 class MemoryManager:
@@ -12,9 +13,10 @@ class MemoryManager:
         self.state_manager = state_manager
         self.llm = llm_client
 
-        # Configurazione Limiti
-        self.HISTORY_LIMIT = 12  # Quanti messaggi recenti tenere (RAM veloce)
-        self.PRUNE_COUNT = 4  # Quanti messaggi vecchi comprimere alla volta
+        # --- MODIFICA 1: FREQUENZA RIDOTTA ---
+        # Aumentiamo il buffer per ridurre le volte in cui deve fermarsi a riassumere.
+        self.HISTORY_LIMIT = 20  # Prima era 12. Ora tiene più scambi in RAM.
+        self.PRUNE_COUNT = 10  # Quando pulisce, libera metà memoria in un colpo solo.
 
     def get_context_block(self) -> str:
         """
@@ -23,7 +25,7 @@ class MemoryManager:
         """
         state = self.state_manager.current_state
         summaries = state.get("summary_log", [])
-        facts = state.get("knowledge_base", [])  # <--- NUOVO: Fatti permanenti
+        facts = state.get("knowledge_base", [])
 
         context_text = ""
 
@@ -37,8 +39,6 @@ class MemoryManager:
         # 2. Riassunti Narrativi (Episodici)
         if summaries:
             context_text += "📜 PREVIOUS STORY SUMMARY:\n"
-            # Prendiamo solo gli ultimi 5 riassunti per non intasare,
-            # o tutti se il modello ha contesto ampio (Gemini 1.5 regge tutto).
             for s in summaries:
                 context_text += f"- {s}\n"
             context_text += "\n"
@@ -48,7 +48,7 @@ class MemoryManager:
     def manage_memory_drift(self):
         """
         Controlla se la storia recente è troppo lunga e innesca la compressione.
-        Da chiamare ad ogni turno.
+        Include una pausa di sicurezza di 10 secondi per l'API.
         """
         history = self.state_manager.current_state.get("history", [])
 
@@ -59,17 +59,31 @@ class MemoryManager:
             to_prune = history[:self.PRUNE_COUNT]
             remaining = history[self.PRUNE_COUNT:]
 
-            # Genera il riassunto tramite LLM
-            summary = self.llm.summarize_history(to_prune)
+            # Genera il riassunto tramite LLM in sicurezza
+            try:
+                summary = self.llm.summarize_history(to_prune)
 
-            # Aggiorna lo stato
-            if "summary_log" not in self.state_manager.current_state:
-                self.state_manager.current_state["summary_log"] = []
+                if summary:
+                    # Aggiorna lo stato solo se il riassunto è valido
+                    if "summary_log" not in self.state_manager.current_state:
+                        self.state_manager.current_state["summary_log"] = []
 
-            self.state_manager.current_state["summary_log"].append(summary)
-            self.state_manager.current_state["history"] = remaining
+                    self.state_manager.current_state["summary_log"].append(summary)
+                    self.state_manager.current_state["history"] = remaining
 
-            print(f"✅ [MEMORY] Archived: {summary[:50]}...")
+                    print(f"✅ [MEMORY] Archived: {summary[:50]}...")
+
+                    # --- MODIFICA 2: PAUSA DI SICUREZZA 10 SECONDI ---
+                    print("⏳ [MEMORY] Cooling down API (Safe Wait 10s)...")
+                    time.sleep(10)
+                    # -------------------------------------------------
+
+                else:
+                    print("⚠️ [MEMORY] Summary failed (empty response), skipping pruning this turn.")
+
+            except Exception as e:
+                print(f"❌ [MEMORY] Error during compression: {e}")
+                # Se fallisce, non crasha il gioco, riproverà al prossimo turno.
 
     def add_fact(self, fact_text: str):
         """Aggiunge un fatto permanente alla Knowledge Base."""

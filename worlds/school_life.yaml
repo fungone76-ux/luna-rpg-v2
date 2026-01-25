@@ -88,7 +88,7 @@ companions:
   Stella:
     default_outfit: "uniform_mod"
     wardrobe:
-      uniform_mod: "school uniform, micro miniskirt, open cardigan, loose socks"
+      uniform_mod: "school uniform, micro miniskirt, open cardigan"
       swimsuit: "micro bikini, school pool setting, wet skin"
       prom_dress: "elegant red evening gown, high slit, strapless"
       nude: "nude, naked, tan lines, blushing, small breasts"

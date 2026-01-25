@@ -43,7 +43,7 @@ class LLMClient:
 
         # LISTA MODELLI (Priorità: Potenza -> Velocità)
         candidates = [
-            "gemini-3-pro-preview",  # Se hai accesso alla 2.0 Flash
+            "gemini-3-flash-preview",  # Se hai accesso alla 2.0 Flash
             "gemini-1.5-pro",
             "gemini-1.5-flash"
         ]
@@ -176,23 +176,31 @@ class LLMClient:
             "updates": {}
         }
 
-        # Cerca JSON
-        json_match = re.search(r"```json\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
-        if not json_match:
-            json_match = re.search(r"(\{.*\})", raw_text, re.DOTALL)
+        # Pulizia preliminare: a volte Gemini mette caratteri invisibili
+        raw_text = raw_text.strip()
+
+        # Cerchiamo il JSON con una logica più robusta
+        json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
 
         if json_match:
-            json_str = json_match.group(1)
-            clean_text = raw_text.replace(json_match.group(0), "").strip()
-            clean_text = clean_text.replace("```json", "").replace("```", "").strip()
-            result["text"] = clean_text
+            json_str = json_match.group(0)
+            # Rimuoviamo il JSON dal testo narrativo per pulire la chat
+            result["text"] = raw_text.replace(json_match.group(0), "").replace("```json", "").replace("```", "").strip()
 
             try:
+                # Tentativo di caricamento
                 data = json.loads(json_str)
                 result["visual_en"] = data.get("visual_en", "")
                 result["tags_en"] = data.get("tags_en", [])
                 result["updates"] = data.get("updates", {})
             except json.JSONDecodeError:
-                print("⚠️ Errore parsing JSON da Gemini")
+                # Se fallisce, proviamo a chiudere forzatamente le parentesi (fix comune)
+                try:
+                    data = json.loads(json_str + "}")
+                    result["visual_en"] = data.get("visual_en", "")
+                    result["tags_en"] = data.get("tags_en", [])
+                    result["updates"] = data.get("updates", {})
+                except:
+                    print("⚠️ JSON irrecuperabile: Risposta salvata come solo testo.")
 
         return result
