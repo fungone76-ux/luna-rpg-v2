@@ -1,0 +1,2 @@
+cd /workspace/stable-diffusion-webui
+python launch.py --api --listen --xformers --enable-insecure-extension-access

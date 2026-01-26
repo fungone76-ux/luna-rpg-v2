@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 class StateManager:
     """
     Gestisce lo stato corrente della partita (Salvataggio, Caricamento, Creazione).
-    Include gestione Tempo, Statistiche e Affinità.
+    Include gestione Tempo, Statistiche, Affinità e OUTFIT NPC.
     """
 
     def __init__(self, saves_dir: str = "storage/saves"):
@@ -27,13 +27,22 @@ class StateManager:
         char_data = companions_db[companion_name]
         default_outfit = char_data.get("default_outfit", "default")
 
-        # FIX LOCATION
+        # Configurazione Location
         world_id = world_data.get("meta", {}).get("id", "unknown")
         start_location = "Start"
         if world_id == "school_life":
             start_location = "School Entrance Gate"
         elif world_id == "fantasy_dark":
             start_location = "Dungeon Cell"
+
+        # Inizializza gli stati degli NPC (Tutti col loro outfit di default)
+        npc_states = {}
+        for name, data in companions_db.items():
+            if name != companion_name:  # Gli NPC
+                npc_states[name] = {
+                    "current_outfit": data.get("default_outfit", "default"),
+                    "location": "Unknown"
+                }
 
         self.current_state = {
             "meta": {
@@ -45,21 +54,21 @@ class StateManager:
                 "time_of_day": "Morning",
                 "location": start_location,
                 "companion_name": companion_name,
-                "current_outfit": default_outfit,
+                "current_outfit": default_outfit,  # Outfit del Companion Attivo
+                "npc_states": npc_states,  # <--- NUOVO: Memoria Outfit NPC
                 "inventory": [],
                 "gold": 0,
                 "hp": 20,
                 "stats": {"strength": 10, "mind": 10, "charisma": 10},
-                "affinity": {
-                    "Luna": 0, "Stella": 0, "Maria": 0
-                },
+                "affinity": {name: 0 for name in companions_db.keys()},
                 "quest_log": ["Survive the School Year."],
                 "flags": {}
             },
             "history": [],
-            "summary_log": []  # <--- AGGIUNTO: Inizializzato subito per sicurezza
+            "summary_log": [],
+            "knowledge_base": []
         }
-        print(f"✨ Session: {companion_name} @ {start_location} (Morning)")
+        print(f"✨ Session Created: {companion_name} + NPCs initialized.")
         return self.current_state
 
     def save_game(self, filename: str = "quicksave.json") -> str:
@@ -72,13 +81,8 @@ class StateManager:
             print(f"❌ Save Error: {e}")
             return ""
 
-    # In core/state_manager.py
-
     def load_game(self, filename: str) -> bool:
-        # Definiamo il percorso completo unendo la cartella saves al nome file
-        import os
         full_path = self.saves_path / filename
-
         if not full_path.exists():
             print(f"❌ File non trovato: {full_path}")
             return False
@@ -87,15 +91,14 @@ class StateManager:
             with open(full_path, "r", encoding="utf-8") as f:
                 self.current_state = json.load(f)
 
-            # Pulizia di sicurezza dopo il caricamento
-            if "game" not in self.current_state:
-                print("❌ Errore: Dati 'game' mancanti nel file!")
-                return False
+            # Fix retroattività: se carichi un vecchio save senza npc_states, lo crea vuoto
+            if "game" in self.current_state and "npc_states" not in self.current_state["game"]:
+                self.current_state["game"]["npc_states"] = {}
 
             print(f"✅ Caricamento riuscito: {self.current_state['game']['location']}")
             return True
         except Exception as e:
-            print(f"❌ Errore critico nel caricamento: {e}")
+            print(f"❌ Load Error: {e}")
             return False
 
     def update_state(self, updates: Dict):
@@ -108,10 +111,25 @@ class StateManager:
             if key in updates and updates[key] is not None:
                 game_data[key] = updates[key]
 
-        # 2. Inventario
+        # 2. Aggiornamento NPC OUTFIT (Fondamentale!)
+        # Se l'LLM manda: "npc_updates": {"Maria": {"outfit": "nude"}}
+        if "npc_updates" in updates:
+            for npc_name, npc_data in updates["npc_updates"].items():
+                if "npc_states" not in game_data: game_data["npc_states"] = {}
+
+                # Inizializza se manca
+                if npc_name not in game_data["npc_states"]:
+                    game_data["npc_states"][npc_name] = {}
+
+                # Aggiorna Outfit
+                if "outfit" in npc_data:
+                    game_data["npc_states"][npc_name]["current_outfit"] = npc_data["outfit"]
+                    print(f"👗 [STATE] {npc_name} changed outfit to: {npc_data['outfit']}")
+
+        # 3. Inventario
         if "add_item" in updates:
             item = updates["add_item"]
-            if item and isinstance(item, str) and item not in game_data["inventory"]:
+            if item and item not in game_data["inventory"]:
                 game_data["inventory"].append(item)
 
         if "remove_item" in updates:
@@ -119,11 +137,11 @@ class StateManager:
             if item and item in game_data["inventory"]:
                 game_data["inventory"].remove(item)
 
-        # 3. Flag
+        # 4. Flag
         if "flags" in updates:
             game_data["flags"].update(updates["flags"])
 
-        # 4. Affinità (con limiti di sicurezza 0-100)
+        # 5. Affinità
         if "affinity_change" in updates:
             changes = updates["affinity_change"]
             if isinstance(changes, dict):
@@ -131,10 +149,9 @@ class StateManager:
                     if val is not None and isinstance(val, (int, float)):
                         if char in game_data["affinity"]:
                             new_val = game_data["affinity"][char] + int(val)
-                            # Impedisce di andare sotto zero o sopra 100
                             game_data["affinity"][char] = max(0, min(100, new_val))
 
-        # 5. Statistiche (con limite min 0)
+        # 6. Statistiche
         if "stat_changes" in updates:
             changes = updates["stat_changes"]
             if isinstance(changes, dict):
@@ -142,7 +159,6 @@ class StateManager:
                     if val is not None and isinstance(val, (int, float)):
                         if stat in game_data.get("stats", {}):
                             new_val = game_data["stats"][stat] + int(val)
-                            # Impedisce statistiche negative
                             game_data["stats"][stat] = max(0, new_val)
 
         # Avanzamento Turno

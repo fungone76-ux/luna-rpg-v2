@@ -5,9 +5,8 @@ import time
 
 class MemoryManager:
     """
-    Gestisce la memoria.
-    Configurazione "LONG PLAY": Riassunti rari e mirati.
-    Include la gestione dei Fatti (Knowledge Base).
+    Gestisce la memoria a breve termine (History), a lungo termine (Summaries)
+    e la conoscenza permanente (Facts/Knowledge Base).
     """
 
     def __init__(self, state_manager, llm_client):
@@ -15,14 +14,16 @@ class MemoryManager:
         self.llm = llm_client
 
         # --- CONFIGURAZIONE FREQUENZA (MOLTO RARA) ---
-        # 50 messaggi = circa 25 turni completi (User + Luna).
+        # 50 messaggi = circa 25 turni completi.
+        # Questo riduce drasticamente le interruzioni di gioco.
         self.HISTORY_LIMIT = 50
-
-        # Quando raggiunge il limite, ne toglie 20 in un colpo solo.
         self.PRUNE_COUNT = 20
 
     def get_context_block(self) -> str:
-        """Costruisce il blocco memoria per il prompt."""
+        """
+        Costruisce il blocco di testo da iniettare nel System Prompt.
+        Include: Fatti Chiave + Riassunti Passati.
+        """
         state = self.state_manager.current_state
         summaries = state.get("summary_log", [])
         facts = state.get("knowledge_base", [])
@@ -47,21 +48,23 @@ class MemoryManager:
 
     def manage_memory_drift(self):
         """
-        Gestisce la compressione della memoria con frequenza ridotta.
+        Controlla se la storia recente è troppo lunga e innesca la compressione.
         """
         history = self.state_manager.current_state.get("history", [])
 
         if len(history) > self.HISTORY_LIMIT:
             print(f"🧠 [MEMORY] Buffer limit reached ({len(history)}/{self.HISTORY_LIMIT}). Starting compression...")
 
+            # Separa i messaggi da archiviare e quelli da tenere
             to_prune = history[:self.PRUNE_COUNT]
             remaining = history[self.PRUNE_COUNT:]
 
             try:
-                # Chiama la funzione di riassunto
+                # Chiama la funzione di riassunto (assicurati che media/llm_client.py sia aggiornato)
                 summary = self.llm.summarize_history(to_prune)
 
                 if summary:
+                    # Aggiorna lo stato
                     if "summary_log" not in self.state_manager.current_state:
                         self.state_manager.current_state["summary_log"] = []
 
@@ -82,7 +85,7 @@ class MemoryManager:
     def add_fact(self, fact_text: str):
         """
         Aggiunge un fatto permanente alla Knowledge Base.
-        (Questa è la funzione che mancava!)
+        Questa funzione mancava e causava il crash.
         """
         if not fact_text: return
 
