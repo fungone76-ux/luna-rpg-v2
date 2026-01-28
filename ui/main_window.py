@@ -7,12 +7,13 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer
 
 from core.engine import GameEngine
-from config.settings import Settings
+from media.video_client import VideoClient  # <--- NUOVO
 from ui.components.startup_dialog import StartupDialog
 from ui.components.image_viewer import InteractiveImageViewer
 from ui.components.status_panel import StatusPanel
 
 
+# --- WORKERS ---
 class LLMWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
@@ -56,12 +57,26 @@ class AudioWorker(QThread):
             pass
 
 
+class VideoWorker(QThread):  # <--- NUOVO WORKER
+    finished = Signal(str)
+
+    def __init__(self, img_path, context):
+        super().__init__()
+        self.client = VideoClient()
+        self.img_path = img_path
+        self.context = context
+
+    def run(self):
+        path = self.client.generate_video(self.img_path, self.context)
+        self.finished.emit(path)
+
+
+# --- MAIN WINDOW ---
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Luna RPG v2 - Universal")
         self.showMaximized()
-
         try:
             with open("ui/styles.qss", "r") as f:
                 self.setStyleSheet(f.read())
@@ -71,6 +86,7 @@ class MainWindow(QMainWindow):
         self.engine = GameEngine()
         self.image_history: List[str] = []
         self.image_index = -1
+        self.last_narrative_context = ""
 
         self._setup_ui()
         QTimer.singleShot(100, self._start_game_sequence)
@@ -85,10 +101,7 @@ class MainWindow(QMainWindow):
                     self._append_story("\n--- SESSION LOADED ---\n")
                     self.status_lbl.setText("Game Loaded.")
             else:
-                selected_world = choice.get("world_id", "school_life")
-                companion = choice.get("companion", "Luna")
-                print(f"🚀 Starting World: {selected_world} with {companion}")
-                self.engine.start_new_game(selected_world, companion)
+                self.engine.start_new_game(choice.get("world_id", "school_life"), choice.get("companion", "Luna"))
                 self._handle_player_input(None, is_intro=True)
         else:
             sys.exit()
@@ -100,54 +113,47 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(25)
 
-        # === LEFT COLUMN ===
+        # LEFT
         left_layout = QVBoxLayout()
-        left_layout.setSpacing(0)
-
-        # 1. STATUS PANEL (ALTEZZA FISSA ORA)
         self.status_panel = StatusPanel()
         left_layout.addWidget(self.status_panel)
 
-        # 2. VISUAL SCENE LABEL (SPOSTATA SOTTO I DATI)
-        # Margin top per staccarla dai box
         lbl_scene = QLabel("Visual Scene")
         lbl_scene.setAlignment(Qt.AlignCenter)
-        lbl_scene.setStyleSheet(
-            "font-size: 14pt; font-weight: bold; color: #3b2410; margin-top: 15px; margin-bottom: 5px;")
+        lbl_scene.setStyleSheet("font-size: 14pt; font-weight: bold; color: #3b2410; margin-top: 15px;")
         left_layout.addWidget(lbl_scene)
 
-        # 3. IMAGE VIEWER
         self.img_viewer = InteractiveImageViewer()
         self.img_viewer.image_lbl.setObjectName("ImageLabel")
         left_layout.addWidget(self.img_viewer, 1)
 
-        # 4. NAVIGAZIONE
+        # BUTTONS IMG/VIDEO
         nav_layout = QHBoxLayout()
         self.btn_prev = QPushButton("◀")
-        self.btn_prev.setFixedWidth(60)
-        self.btn_prev.setMinimumHeight(40)
+        self.btn_prev.setFixedWidth(50)
         self.btn_prev.clicked.connect(self._prev_image)
-        self.btn_prev.setEnabled(False)
+
+        # TASTO ANIMATE
+        self.btn_animate = QPushButton("🎬 Animate")
+        self.btn_animate.setStyleSheet("background-color: #ff9800; color: white; font-weight: bold;")
+        self.btn_animate.clicked.connect(self._on_animate_click)
+        self.btn_animate.setEnabled(False)
 
         self.btn_next = QPushButton("▶")
-        self.btn_next.setFixedWidth(60)
-        self.btn_next.setMinimumHeight(40)
+        self.btn_next.setFixedWidth(50)
         self.btn_next.clicked.connect(self._next_image)
-        self.btn_next.setEnabled(False)
 
         nav_layout.addWidget(self.btn_prev)
-        nav_layout.addStretch()
+        nav_layout.addWidget(self.btn_animate)
         nav_layout.addWidget(self.btn_next)
         left_layout.addLayout(nav_layout)
 
-        # 5. CONTROLLI
+        # OPTIONS
         ctrl_layout = QHBoxLayout()
-        self.chk_voice = QCheckBox("Voice Narrator")
-        self.chk_voice.setChecked(True)
+        self.chk_voice = QCheckBox("Voice")
+        self.chk_voice.setChecked(False)
         ctrl_layout.addWidget(self.chk_voice)
-
         self.status_lbl = QLabel("Ready.")
-        self.status_lbl.setStyleSheet("color: #555; font-style: italic; font-size: 13px;")
         ctrl_layout.addWidget(self.status_lbl)
         ctrl_layout.addStretch()
 
@@ -157,16 +163,14 @@ class MainWindow(QMainWindow):
         btn_load.clicked.connect(self._on_load)
         ctrl_layout.addWidget(btn_save)
         ctrl_layout.addWidget(btn_load)
-
         left_layout.addLayout(ctrl_layout)
 
         main_layout.addLayout(left_layout, 4)
 
-        # === RIGHT COLUMN ===
+        # RIGHT
         right_layout = QVBoxLayout()
-
         lbl_story = QLabel("Story Log")
-        lbl_story.setStyleSheet("font-size: 16pt; font-weight: bold; color: #3b2410;")
+        lbl_story.setStyleSheet("font-size: 16pt; font-weight: bold;")
         right_layout.addWidget(lbl_story)
 
         self.story_edit = QTextEdit()
@@ -176,20 +180,14 @@ class MainWindow(QMainWindow):
 
         input_layout = QHBoxLayout()
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("What do you do?")
-        self.input_field.setMinimumHeight(50)
-        self.input_field.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.input_field.setPlaceholderText("Action...")
         self.input_field.returnPressed.connect(self._send_action)
-        input_layout.addWidget(self.input_field)
-
         self.btn_send = QPushButton("Send")
-        self.btn_send.setMinimumHeight(50)
-        self.btn_send.setMinimumWidth(100)
         self.btn_send.clicked.connect(self._send_action)
+        input_layout.addWidget(self.input_field)
         input_layout.addWidget(self.btn_send)
 
         right_layout.addLayout(input_layout)
-
         main_layout.addLayout(right_layout, 6)
 
     def _send_action(self):
@@ -203,7 +201,6 @@ class MainWindow(QMainWindow):
             self.input_field.clear()
 
         self.input_field.setDisabled(True)
-        self.input_field.setPlaceholderText("...")
         self.status_lbl.setText("Thinking...")
 
         self.llm_worker = LLMWorker(self.engine, text, is_intro)
@@ -214,32 +211,25 @@ class MainWindow(QMainWindow):
     @Slot(dict)
     def _on_llm_finished(self, data):
         text = data.get("text", "")
-        visual_en = data.get("visual_en", "")
-        tags_en = data.get("tags_en", [])
+        self.last_narrative_context = text  # Salva contesto per video
 
-        if "La connessione neurale è instabile... (Errore API)" in text:
-            self._append_story(f"\n**SYSTEM**: ⚠️ {text}\n")
-            self.status_lbl.setText("API Error.")
+        if "Errore API" in text:
+            self._append_story(f"⚠️ {text}")
             self.input_field.setDisabled(False)
-            self.img_viewer.image_lbl.setText("Aborted.")
             return
 
         name = self.engine.state_manager.current_state["game"]["companion_name"]
         self._append_story(f"\n**{name.upper()}**: {text}\n")
-
         self._update_stats()
 
         self.input_field.setDisabled(False)
-        self.input_field.setPlaceholderText("What do you do?")
         self.input_field.setFocus()
-        self.status_lbl.setText("Waiting...")
+        self.status_lbl.setText("Generating Image...")
 
         if self.chk_voice.isChecked():
-            self.audio_worker = AudioWorker(self.engine, text)
-            self.audio_worker.start()
+            AudioWorker(self.engine, text).start()
 
-        self.img_viewer.image_lbl.setText("Generating Image...")
-        self.img_worker = ImageWorker(self.engine, visual_en, tags_en)
+        self.img_worker = ImageWorker(self.engine, data.get("visual_en", ""), data.get("tags_en", []))
         self.img_worker.finished.connect(self._on_image_finished)
         self.img_worker.start()
 
@@ -247,9 +237,40 @@ class MainWindow(QMainWindow):
     def _on_image_finished(self, path):
         if path:
             self._register_image(path)
-            self.status_lbl.setText("Image Ready.")
+            self.status_lbl.setText("Ready.")
+            self.btn_animate.setEnabled(True)  # Abilita video
         else:
             self.img_viewer.image_lbl.setText("Image Error.")
+
+    def _on_animate_click(self):
+        if self.image_index < 0: return
+        current_img = self.image_history[self.image_index]
+
+        self.status_lbl.setText("🎬 Rendering Video (Wait 60s)...")
+        self.btn_animate.setDisabled(True)
+        self.img_viewer.image_lbl.setText("🎬 Rendering Video... Please Wait.")
+
+        self.vid_worker = VideoWorker(current_img, self.last_narrative_context)
+        self.vid_worker.finished.connect(self._on_video_finished)
+        self.vid_worker.start()
+
+    @Slot(str)
+    def _on_video_finished(self, path):
+        if path:
+            # Sostituiamo l'immagine statica con il video nella history?
+            # Per ora mostriamolo e basta.
+            print(f"Video created: {path}")
+            # Qui servirebbe un player video vero, ma per ora usiamo il viewer statico
+            # che non supporta mp4.
+            # TODO: Aggiornare InteractiveImageViewer per supportare video o aprire player esterno
+            import os
+            os.startfile(path)  # Apre col player di sistema su Windows
+            self.status_lbl.setText("Video Playing.")
+        else:
+            self.status_lbl.setText("Video Failed.")
+            self.img_viewer.update_image(self.image_history[self.image_index])  # Ripristina img
+
+        self.btn_animate.setEnabled(True)
 
     def _register_image(self, path):
         self.image_history.append(path)
@@ -274,8 +295,7 @@ class MainWindow(QMainWindow):
             self._update_nav_buttons()
 
     def _update_stats(self):
-        state = self.engine.state_manager.current_state
-        self.status_panel.update_status(state)
+        self.status_panel.update_status(self.engine.state_manager.current_state)
 
     def _append_story(self, text):
         self.story_edit.append(text)
@@ -283,12 +303,10 @@ class MainWindow(QMainWindow):
         sb.setValue(sb.maximum())
 
     def _on_save(self):
-        if self.engine.state_manager.save_game("manual_save.json"):
-            self.status_lbl.setText("Saved.")
+        if self.engine.state_manager.save_game("manual_save.json"): self.status_lbl.setText("Saved.")
 
     def _on_load(self):
         path, _ = QFileDialog.getOpenFileName(self, "Load Game", "storage/saves", "JSON (*.json)")
-        if path:
-            if self.engine.load_game(path):
-                self._update_stats()
-                self.status_lbl.setText("Loaded.")
+        if path and self.engine.load_game(path):
+            self._update_stats()
+            self.status_lbl.setText("Loaded.")
