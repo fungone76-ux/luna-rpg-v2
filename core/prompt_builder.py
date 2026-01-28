@@ -1,13 +1,13 @@
 # file: core/prompt_builder.py
 from __future__ import annotations
 from typing import Dict, List, Tuple
+import re
 
 try:
     from sd_prompt_rules import apply_sd_prompt_rules
 except ImportError:
     apply_sd_prompt_rules = None
 
-# --- PROMPT BASE DEFINITIVI (I tuoi) ---
 BASE_PROMPTS = {
     "Luna": (
         "score_9, score_8_up, masterpiece, photorealistic,  detailed, atmospheric, "
@@ -27,104 +27,77 @@ BASE_PROMPTS = {
     )
 }
 
-# Fallback per NPC generici
 NPC_BASE = "score_9, score_8_up, masterpiece, photorealistic, 1girl, detailed face, cinematic lighting"
-
-# Negative Prompt Fisso (Il tuo)
 NEGATIVE_PROMPT = "score_5, score_4, low quality, anime, monochrome, deformed, bad anatomy, worst face, extra fingers, cartoon, 3d render"
 
 
-def _get_outfit_string(char_name: str, game_state: Dict, world_data: Dict) -> str:
-    """Recupera l'outfit corrente e lo formatta."""
-    # 1. Identifica la chiave outfit (es. "teacher_suit")
+def _remove_conflicting_footwear(outfit_desc: str, visual_context: str) -> str:
+    """Rimuove stivali/scarpe se la scena richiede piedi nudi (Versione Single)."""
+    vis_lower = visual_context.lower()
+    if any(k in vis_lower for k in ["barefoot", "feet", "toes", "foot worship", "soles", "scalza"]):
+        clean = re.sub(r"\b(boots|shoes|sneakers|heels|loafers|footwear)\b", "", outfit_desc, flags=re.IGNORECASE)
+        return re.sub(r",\s*,", ",", clean).strip(" ,")
+    return outfit_desc
+
+
+def _get_outfit_string(char_name: str, game_state: Dict, world_data: Dict, visual_context: str = "") -> str:
     current_outfit_key = "default"
-    if char_name == game_state.get("companion_name"):
-        current_outfit_key = game_state.get("current_outfit", "default")
+    if char_name == game_state.get("game", {}).get("companion_name"):
+        current_outfit_key = game_state.get("game", {}).get("current_outfit", "default")
     else:
-        # Per NPC, usa il default definito nello YAML
         companions_db = world_data.get("companions", {})
-        char_data = companions_db.get(char_name, {})
-        current_outfit_key = char_data.get("default_outfit", "default")
+        if char_name in companions_db:
+            current_outfit_key = companions_db[char_name].get("default_outfit", "default")
 
-    # 2. Cerca la descrizione nel Wardrobe dello YAML
     companions_db = world_data.get("companions", {})
-    char_data = companions_db.get(char_name, {})
-    wardrobe = char_data.get("wardrobe", {})
+    wardrobe = companions_db.get(char_name, {}).get("wardrobe", {})
+    outfit_desc = wardrobe.get(current_outfit_key, current_outfit_key)
 
-    outfit_desc = wardrobe.get(current_outfit_key, "")
+    clean_desc = str(outfit_desc).lower().replace("wearing ", "")
+    clean_desc = clean_desc.replace("(", "").replace(")", "").strip()  # Fix parentesi
 
-    # Fallback
-    if not outfit_desc:
-        outfit_desc = wardrobe.get("default", "clothing")
+    # Fix Scarpe (Aggiunto anche qui!)
+    clean_desc = _remove_conflicting_footwear(clean_desc, visual_context)
 
-    # 3. Pulizia e Iniezione
-    clean_desc = str(outfit_desc).lower().replace("wearing ", "").strip()
-    clean_desc = clean_desc.replace("(", "").replace(")", "")
-
-    nude_keywords = ["naked", "nude", "undressed", "nothing"]
-
-    if any(k in clean_desc for k in nude_keywords):
+    if "nude" in clean_desc or "naked" in clean_desc:
         return f"(nude:1.3), {clean_desc}"
     else:
         return f"(wearing {clean_desc}:1.3)"
 
 
-def build_image_prompt(
-        visual_en: str,
-        tags_en: List[str],
-        game_state: Dict,
-        world_data: Dict
-) -> Tuple[str, str]:
-    # 1. Identifica il personaggio (Modalità Singola)
+def build_image_prompt(visual_en, tags_en, game_state, world_data):
     full_text = (visual_en + " " + " ".join(tags_en)).lower()
 
-    # Default: usa la compagna attiva
-    char_name = game_state.get("companion_name", "Luna")
+    # Il soggetto è deciso dal Dispatcher o dal companion attivo
+    char_name = game_state.get("game", {}).get("companion_name", "Luna")
 
-    # Se c'è un riferimento esplicito nel testo a un altro personaggio base, usa quello (priorità al testo)
-    # Esempio: se nel testo c'è "Stella", generiamo Stella anche se la compagna è Luna.
+    # Override se il visual cita un altro personaggio (es. "Stella")
     for name in BASE_PROMPTS.keys():
         if name.lower() in full_text:
             char_name = name
             break
 
-            # 2. Costruzione Prompt
-    prompt_parts = []
-
-    # A. Base Prompt (Dal Dizionario Hardcoded)
     base = BASE_PROMPTS.get(char_name, NPC_BASE)
 
-    # B. Outfit (Iniettato dallo Stato)
-    outfit_str = _get_outfit_string(char_name, game_state, world_data)
+    # Passiamo visual_en per la logica scarpe
+    outfit_str = _get_outfit_string(char_name, game_state, world_data, visual_context=visual_en)
 
-    prompt_parts.append(f"{base}, {outfit_str}")
+    prompt_parts = [f"{base}, {outfit_str}"]
 
-    # 3. Scena & Tags (Dall'LLM)
-    # Rimuoviamo tag di qualità doppi se l'LLM li ha messi
     banned = ["score_9", "score_8_up", "masterpiece", "best quality", "1girl", "photorealistic"]
     clean_tags = [t for t in tags_en if t.lower() not in banned]
 
-    if clean_tags:
-        prompt_parts.append(", ".join(clean_tags))
+    if clean_tags: prompt_parts.append(", ".join(clean_tags))
+    if visual_en: prompt_parts.append(f"({visual_en}:1.1)")
 
-    if visual_en:
-        prompt_parts.append(f"({visual_en}:1.1)")
-
-    # 4. Location (Dallo Stato, se non già descritta)
-    loc = game_state.get("location", "")
+    loc = game_state.get("game", {}).get("location", "")
     if loc and loc.lower() not in visual_en.lower():
         prompt_parts.append(f"background is {loc}")
 
-    # Assemblaggio
     full_prompt_str = ", ".join([p.strip().strip(",") for p in prompt_parts if p])
-
-    # Negative Prompt standard (Senza logica gruppo)
-    final_negative = NEGATIVE_PROMPT
-
-    return _finalize_prompt(full_prompt_str, final_negative, tags_en, visual_en, full_text)
+    return _finalize_prompt(full_prompt_str, NEGATIVE_PROMPT, tags_en, visual_en, full_text)
 
 
 def _finalize_prompt(pos, neg, tags, visual, context):
-    if apply_sd_prompt_rules:
-        return apply_sd_prompt_rules(pos, neg, tags, visual, context)
+    if apply_sd_prompt_rules: return apply_sd_prompt_rules(pos, neg, tags, visual, context)
     return pos, neg
