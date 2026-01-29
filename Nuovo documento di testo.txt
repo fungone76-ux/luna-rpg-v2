@@ -1,2 +1,94 @@
+======================================================================
+  MANUALE DI RIPRISTINO TOTALE - PROGETTO LUNA RPG (RunPod Edition)
+======================================================================
+
+OBIETTIVO: 
+Ricostruire l'ambiente con "Doppio Venv" (Stable Diffusion + ComfyUI Wan 2.1)
+in meno di 10 minuti su una nuova istanza RunPod.
+
+----------------------------------------------------------------------
+PARTE 1: LO SCRIPT DI INSTALLAZIONE (restore_runpod.sh)
+----------------------------------------------------------------------
+Crea un file chiamato 'restore_runpod.sh' su RunPod e incollaci questo codice.
+NOTA: Devi inserire i link di Civitai dove indicato con [INCOLLA LINK QUI].
+
+#!/bin/bash
+
+# 1. RIPRISTINO STABLE DIFFUSION (Immagini)
+echo "📦 Ripristino Modelli Stable Diffusion..."
+cd /workspace/stable-diffusion-webui/models/Stable-diffusion
+
+# --- MODELLO PRINCIPALE (LUNA) ---
+# Sostituisci il link sotto con quello del tuo modello preferito (es. Juggernaut, Pony, ecc.)
+wget -O Luna_Main_Model.safetensors "https://civitai.com/api/download/models/XXXXXX?token=TUO_TOKEN"
+
+cd /workspace/stable-diffusion-webui/models/Lora
+echo "⬇️ Scaricamento LoRA..."
+# Inserisci qui i link diretti per le tue LoRA (prese da INVENTARIO.txt)
+wget -O stsDebbie-10e.safetensors "LINK_CIVITAI_DEBBIE"
+wget -O stsSmith-10e.safetensors "LINK_CIVITAI_SMITH"
+wget -O FantasyWorldPonyV2.safetensors "LINK_CIVITAI_PONY"
+wget -O Expressive_H-000001.safetensors "LINK_CIVITAI_EXPRESSIVE"
+
+# 2. INSTALLAZIONE COMFYUI & WAN 2.1 (Video)
+echo "🎬 Installazione ComfyUI e Ambiente Isolato..."
+cd /workspace
+git clone https://github.com/comfyanonymous/ComfyUI.git
+cd ComfyUI
+
+# Scaricamento Modelli Wan 2.1 (Link tecnici fissi - NON CAMBIARE)
+echo "⬇️ Scaricamento Wan 2.1 GGUF..."
+wget -O models/unet/wan2.1_i2v_fp8.gguf "https://huggingface.co/City96/Wan2.1-I2V-GGUF/resolve/main/Wan2.1-I2V-14B-480P-Q4_K_M.gguf"
+wget -O models/vae/wan_2.1_vae.safetensors "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
+wget -O models/clip_vision/clip_vision_h.safetensors "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors"
+
+cd models/text_encoders
+wget -O umt5_xxl_fp8_e4m3fn_scaled.safetensors "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+cd ../..
+
+# 3. CREAZIONE DOPPIO AMBIENTE (Venv Dedicato per Comfy)
+echo "🛡️ Configurazione Ambiente Python Isolato (venv_comfy)..."
+python -m venv venv_comfy
+./venv_comfy/bin/pip install --upgrade pip
+# Installazione pacchetti specifici per Wan 2.1 + GGUF
+./venv_comfy/bin/pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
+./venv_comfy/bin/pip install -r requirements.txt
+./venv_comfy/bin/pip install requests websocket-client accelerate imageio-ffmpeg opencv-python-headless gguf GitPython rich diffusers huggingface_hub toml ftfy sageattention
+
+# 4. INSTALLAZIONE NODI CUSTOM
+echo "🧩 Installazione Nodi..."
+cd custom_nodes
+git clone https://github.com/city96/ComfyUI-GGUF
+git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+git clone https://github.com/ltdrdata/ComfyUI-Manager
+git clone https://github.com/Kijai/ComfyUI-WanVideoWrapper
+cd ..
+
+echo "✅ RIPRISTINO COMPLETATO! Ora apri i due terminali."
+
+
+----------------------------------------------------------------------
+PARTE 2: ISTRUZIONI DI AVVIO (Da fare ogni volta)
+----------------------------------------------------------------------
+
+APRI TERMINALE 1 (Stable Diffusion - Immagini)
+Copia e incolla questo comando per avviarlo leggero (MedVRAM):
+------------------------------------------------------------
 cd /workspace/stable-diffusion-webui
-python launch.py --api --listen --xformers --enable-insecure-extension-access
+/workspace/venv/bin/python launch.py --listen --port 7860 --xformers --enable-insecure-extension-access --skip-install --api --medvram
+------------------------------------------------------------
+
+APRI TERMINALE 2 (ComfyUI - Video)
+Copia e incolla questo comando per usare il VENV ISOLATO:
+------------------------------------------------------------
+cd /workspace/ComfyUI
+./venv_comfy/bin/python main.py --listen --port 8188
+------------------------------------------------------------
+
+----------------------------------------------------------------------
+PARTE 3: FILE DA AVERE SUL PC (Checklist)
+----------------------------------------------------------------------
+1. Questo file (MANUALE_RIPRISTINO_LUNA.txt)
+2. Il file JSON del workflow: "wan_gguf_workflow.json" (Quello senza clip_vision nel nodo 12)
+3. Il codice Python aggiornato: "media/video_client.py" (Quello blindato con i try/except)
+4. La cartella del tuo repository "luna-rpg-v2"
