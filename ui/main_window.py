@@ -1,5 +1,8 @@
 # file: ui/main_window.py
 import sys
+import os
+import platform
+import subprocess
 from typing import List
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QTextEdit, QLineEdit, QPushButton, QLabel, QFrame,
@@ -7,13 +10,14 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer
 
 from core.engine import GameEngine
-from media.video_client import VideoClient  # <--- NUOVO
+from media.video_client import VideoClient
 from ui.components.startup_dialog import StartupDialog
 from ui.components.image_viewer import InteractiveImageViewer
 from ui.components.status_panel import StatusPanel
 
 
 # --- WORKERS ---
+
 class LLMWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
@@ -57,7 +61,7 @@ class AudioWorker(QThread):
             pass
 
 
-class VideoWorker(QThread):  # <--- NUOVO WORKER
+class VideoWorker(QThread):
     finished = Signal(str)
 
     def __init__(self, img_path, context):
@@ -67,11 +71,13 @@ class VideoWorker(QThread):  # <--- NUOVO WORKER
         self.context = context
 
     def run(self):
+        # Il client ora restituisce il percorso del file .mp4
         path = self.client.generate_video(self.img_path, self.context)
         self.finished.emit(path)
 
 
 # --- MAIN WINDOW ---
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -113,7 +119,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(25)
 
-        # LEFT
+        # LEFT SIDE
         left_layout = QVBoxLayout()
         self.status_panel = StatusPanel()
         left_layout.addWidget(self.status_panel)
@@ -127,13 +133,12 @@ class MainWindow(QMainWindow):
         self.img_viewer.image_lbl.setObjectName("ImageLabel")
         left_layout.addWidget(self.img_viewer, 1)
 
-        # BUTTONS IMG/VIDEO
+        # NAV BUTTONS
         nav_layout = QHBoxLayout()
         self.btn_prev = QPushButton("◀")
         self.btn_prev.setFixedWidth(50)
         self.btn_prev.clicked.connect(self._prev_image)
 
-        # TASTO ANIMATE
         self.btn_animate = QPushButton("🎬 Animate")
         self.btn_animate.setStyleSheet("background-color: #ff9800; color: white; font-weight: bold;")
         self.btn_animate.clicked.connect(self._on_animate_click)
@@ -148,7 +153,7 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self.btn_next)
         left_layout.addLayout(nav_layout)
 
-        # OPTIONS
+        # CONTROL PANEL
         ctrl_layout = QHBoxLayout()
         self.chk_voice = QCheckBox("Voice")
         self.chk_voice.setChecked(False)
@@ -167,7 +172,7 @@ class MainWindow(QMainWindow):
 
         main_layout.addLayout(left_layout, 4)
 
-        # RIGHT
+        # RIGHT SIDE (STORY)
         right_layout = QVBoxLayout()
         lbl_story = QLabel("Story Log")
         lbl_story.setStyleSheet("font-size: 16pt; font-weight: bold;")
@@ -211,7 +216,7 @@ class MainWindow(QMainWindow):
     @Slot(dict)
     def _on_llm_finished(self, data):
         text = data.get("text", "")
-        self.last_narrative_context = text  # Salva contesto per video
+        self.last_narrative_context = text
 
         if "Errore API" in text:
             self._append_story(f"⚠️ {text}")
@@ -238,7 +243,7 @@ class MainWindow(QMainWindow):
         if path:
             self._register_image(path)
             self.status_lbl.setText("Ready.")
-            self.btn_animate.setEnabled(True)  # Abilita video
+            self.btn_animate.setEnabled(True)
         else:
             self.img_viewer.image_lbl.setText("Image Error.")
 
@@ -246,9 +251,8 @@ class MainWindow(QMainWindow):
         if self.image_index < 0: return
         current_img = self.image_history[self.image_index]
 
-        self.status_lbl.setText("🎬 Rendering Video (Wait 60s)...")
+        self.status_lbl.setText("🎬 Rendering Video (Optimized 480x704)...")
         self.btn_animate.setDisabled(True)
-        self.img_viewer.image_lbl.setText("🎬 Rendering Video... Please Wait.")
 
         self.vid_worker = VideoWorker(current_img, self.last_narrative_context)
         self.vid_worker.finished.connect(self._on_video_finished)
@@ -256,19 +260,27 @@ class MainWindow(QMainWindow):
 
     @Slot(str)
     def _on_video_finished(self, path):
-        if path:
-            # Sostituiamo l'immagine statica con il video nella history?
-            # Per ora mostriamolo e basta.
-            print(f"Video created: {path}")
-            # Qui servirebbe un player video vero, ma per ora usiamo il viewer statico
-            # che non supporta mp4.
-            # TODO: Aggiornare InteractiveImageViewer per supportare video o aprire player esterno
-            import os
-            os.startfile(path)  # Apre col player di sistema su Windows
-            self.status_lbl.setText("Video Playing.")
+        """Gestisce il completamento del video e l'apertura automatica."""
+        if path and os.path.exists(path):
+            self.status_lbl.setText("✅ Video Ready. Opening...")
+            print(f"Opening Video: {path}")
+
+            # Ripristina l'immagine nel viewer UI
+            self.img_viewer.update_image(self.image_history[self.image_index])
+
+            # APERTURA AUTOMATICA (Windows/Linux/Mac)
+            try:
+                if platform.system() == "Windows":
+                    os.startfile(path)
+                elif platform.system() == "Darwin":
+                    subprocess.call(["open", path])
+                else:
+                    subprocess.call(["xdg-open", path])
+            except Exception as e:
+                print(f"Auto-play error: {e}")
         else:
-            self.status_lbl.setText("Video Failed.")
-            self.img_viewer.update_image(self.image_history[self.image_index])  # Ripristina img
+            self.status_lbl.setText("❌ Video Rendering Failed.")
+            self.img_viewer.update_image(self.image_history[self.image_index])
 
         self.btn_animate.setEnabled(True)
 
@@ -303,10 +315,11 @@ class MainWindow(QMainWindow):
         sb.setValue(sb.maximum())
 
     def _on_save(self):
-        if self.engine.state_manager.save_game("manual_save.json"): self.status_lbl.setText("Saved.")
+        if self.engine.state_manager.save_game("manual_save.json"):
+            self.status_lbl.setText("Game Saved.")
 
     def _on_load(self):
         path, _ = QFileDialog.getOpenFileName(self, "Load Game", "storage/saves", "JSON (*.json)")
         if path and self.engine.load_game(path):
             self._update_stats()
-            self.status_lbl.setText("Loaded.")
+            self.status_lbl.setText("Game Loaded.")
