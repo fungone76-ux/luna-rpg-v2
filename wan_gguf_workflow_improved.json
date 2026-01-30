@@ -1,0 +1,32 @@
+{
+  "1": { "class_type": "UnetLoaderGGUF", "inputs": { "unet_name": "Wan2_2-I2V-A14B-HIGH_SVI_consistent_face_nsfw_fp8.safetensors" } },
+  "2": { "class_type": "VAELoader", "inputs": { "vae_name": "wan_2.1_vae.safetensors" } },
+  "3": { "class_type": "CLIPLoader", "inputs": { "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors", "type": "wan" } },
+  "5": { "class_type": "CLIPTextEncode", "inputs": { "text": "masterpiece, 8k, sharp focus, cinematic lighting, highly detailed, professional quality, crystal clear", "clip": ["3", 0] } },
+  "6": { "class_type": "LoadImage", "inputs": { "image": "input.png", "upload": "image" } },
+  "11": { "class_type": "CLIPTextEncode", "inputs": { "text": "blurry, mosaic, pixelated, low resolution, fuzzy, cloudy, hazy, distorted, compressed, artifacts, noise, grain", "clip": ["3", 0] } },
+  "7": {
+    "class_type": "WanImageToVideo",
+    "inputs": {
+      "vae": ["2", 0], "start_image": ["6", 0], "positive": ["5", 0], "negative": ["11", 0],
+      "width": 768, "height": 1024, "length": 61, "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 42, "steps": 45, "cfg": 6.0, "sampler_name": "uni_pc", "scheduler": "simple",
+      "denoise": 0.85,
+      "model": ["1", 0], "positive": ["7", 0], "negative": ["7", 1], "latent_image": ["7", 2]
+    }
+  },
+  "9": { "class_type": "VAEDecode", "inputs": { "samples": ["8", 0], "vae": ["2", 0] } },
+  "10": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["9", 0], "frame_rate": 15, "loop_count": 0, "filename_prefix": "Luna_Fix",
+      "format": "video/h264-mp4", "pix_fmt": "yuv420p", "crf": 15, "save_output": true,
+      "pingpong": false, "save_to_workflow": false, "stop_at_end": true
+    }
+  }
+}

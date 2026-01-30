@@ -11,7 +11,7 @@ class VideoClient:
         sd_url = self.settings.get_sd_url().rstrip("/")
         self.comfy_url = sd_url.replace("-7860", "-8188") if "runpod.net" in sd_url else "http://127.0.0.1:8188"
         self.sd_url = sd_url
-        self.workflow_path = "wan_gguf_workflow_improved.json"
+        self.workflow_path = "wan_gguf_workflow.json"
 
     def _manage_vram(self, action="unload"):
         try:
